@@ -50,7 +50,7 @@ public class Digest {
         time = msg.getLong();
     }
 
-    public Digest(ReplicatedState<?> state) {
+    public Digest(ReplicatedState state) {
         address = state.getAddress();
         assert address != null : "Null replicated state address";
         time = state.getTime();

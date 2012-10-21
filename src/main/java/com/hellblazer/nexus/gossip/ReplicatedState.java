@@ -14,7 +14,6 @@
  */
 package com.hellblazer.nexus.gossip;
 
-import java.io.Serializable;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.UUID;
@@ -23,10 +22,10 @@ import java.util.UUID;
  * @author hhildebrand
  * 
  */
-public class ReplicatedState<T extends Serializable> {
+public class ReplicatedState {
     private final long              epoch = -1;
     private final UUID              id;
-    private final T                 state;
+    private final byte[]            state;
     private volatile long           time  = -1L;
     private final InetSocketAddress address;
 
@@ -38,7 +37,7 @@ public class ReplicatedState<T extends Serializable> {
      * @param id
      * @param state
      */
-    public ReplicatedState(InetSocketAddress address, UUID id, T state) {
+    public ReplicatedState(InetSocketAddress address, UUID id, byte[] state) {
         this.address = address;
         this.id = id;
         this.state = state;
@@ -75,7 +74,7 @@ public class ReplicatedState<T extends Serializable> {
     /**
      * @return the state
      */
-    public T getState() {
+    public byte[] getState() {
         return state;
     }
 
@@ -135,7 +134,7 @@ public class ReplicatedState<T extends Serializable> {
             return false;
         if (getClass() != obj.getClass())
             return false;
-        ReplicatedState<?> other = (ReplicatedState<?>) obj;
+        ReplicatedState other = (ReplicatedState) obj;
         if (epoch != other.epoch)
             return false;
         if (id == null) {

@@ -58,14 +58,14 @@ public interface GossipCommunications {
      * @param state
      * @param inetSocketAddress
      */
-    void send(ReplicatedState<?> state, InetSocketAddress inetSocketAddress);
+    void send(ReplicatedState state, InetSocketAddress inetSocketAddress);
 
     /**
      * Set the gossip service
      * 
      * @param gossip
      */
-    void setGossip(Gossip<?> gossip);
+    void setGossip(Gossip gossip);
 
     /**
      * Start the communications service

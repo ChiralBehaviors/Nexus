@@ -39,7 +39,7 @@ public class Ring {
      * 
      * @param state
      */
-    public void send(ReplicatedState<?> state) {
+    public void send(ReplicatedState state) {
         InetSocketAddress l = neighbor.get();
         if (l == null) {
             if (log.isTraceEnabled()) {

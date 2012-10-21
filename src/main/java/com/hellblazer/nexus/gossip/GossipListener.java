@@ -26,12 +26,11 @@
 
 package com.hellblazer.nexus.gossip;
 
-import java.io.Serializable;
 
 /**
  * @author hhildebrand
  * 
  */
-public interface GossipListener<T extends Serializable> {
-    void receive(ReplicatedState<T> state);
+public interface GossipListener {
+    void receive(ReplicatedState state);
 }

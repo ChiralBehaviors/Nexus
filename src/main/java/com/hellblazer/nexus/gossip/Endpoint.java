@@ -14,7 +14,6 @@
  */
 package com.hellblazer.nexus.gossip;
 
-import java.io.Serializable;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
@@ -61,16 +60,16 @@ public class Endpoint {
         bytes.putInt(ipaddress.getPort());
     }
 
-    private final FailureDetector       fd;
-    private volatile GossipMessages     handler;
-    private volatile ReplicatedState<?> state;
-    private volatile boolean            isAlive = true;
+    private final FailureDetector    fd;
+    private volatile GossipMessages  handler;
+    private volatile ReplicatedState state;
+    private volatile boolean         isAlive = true;
 
     public Endpoint() {
         fd = null;
     }
 
-    public Endpoint(ReplicatedState<?> replicatedState,
+    public Endpoint(ReplicatedState replicatedState,
                     FailureDetector failureDetector) {
         state = replicatedState;
         fd = failureDetector;
@@ -84,9 +83,8 @@ public class Endpoint {
         return handler;
     }
 
-    @SuppressWarnings("unchecked")
-    public <T extends Serializable> ReplicatedState<T> getState() {
-        return (ReplicatedState<T>) state;
+    public ReplicatedState getState() {
+        return state;
     }
 
     public long getTime() {
@@ -105,7 +103,7 @@ public class Endpoint {
         isAlive = false;
     }
 
-    public void record(ReplicatedState<?> newState) {
+    public void record(ReplicatedState newState) {
         if (state != newState) {
             state = newState;
             fd.record(state.getTime(), System.currentTimeMillis());
@@ -134,7 +132,7 @@ public class Endpoint {
         return "Endpoint " + state.getId();
     }
 
-    public void updateState(ReplicatedState<?> newState) {
+    public void updateState(ReplicatedState newState) {
         state = newState;
         if (logger.isTraceEnabled()) {
             logger.trace(String.format("new replicated state time: %s",

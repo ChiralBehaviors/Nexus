@@ -22,7 +22,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
-import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
@@ -38,7 +37,6 @@ import org.mockito.internal.verification.Times;
 
 public class GossipTest extends TestCase {
 
-    @SuppressWarnings("unchecked")
     public void testApplyDiscover() throws Exception {
         GossipCommunications communications = mock(GossipCommunications.class);
         FailureDetectorFactory fdFactory = mock(FailureDetectorFactory.class);
@@ -47,42 +45,24 @@ public class GossipTest extends TestCase {
         InetSocketAddress localAddress = new InetSocketAddress("127.0.0.1", 0);
         when(view.getLocalAddress()).thenReturn(localAddress);
         when(communications.getLocalAddress()).thenReturn(localAddress);
-        GossipListener<?> receiver = mock(GossipListener.class);
+        GossipListener receiver = mock(GossipListener.class);
 
         InetSocketAddress address1 = new InetSocketAddress("127.0.0.1", 1);
         InetSocketAddress address2 = new InetSocketAddress("127.0.0.1", 2);
         InetSocketAddress address3 = new InetSocketAddress("127.0.0.1", 3);
         InetSocketAddress address4 = new InetSocketAddress("127.0.0.1", 4);
 
-        ReplicatedState<?> state1 = new ReplicatedState<Serializable>(
-                                                                      address1,
-                                                                      new UUID(
-                                                                               666,
-                                                                               1),
-                                                                      null);
-        ReplicatedState<?> state2 = new ReplicatedState<Serializable>(
-                                                                      address2,
-                                                                      new UUID(
-                                                                               666,
-                                                                               2),
-                                                                      null);
-        ReplicatedState<?> state3 = new ReplicatedState<Serializable>(
-                                                                      address3,
-                                                                      new UUID(
-                                                                               666,
-                                                                               3),
-                                                                      null);
-        ReplicatedState<?> state4 = new ReplicatedState<Serializable>(
-                                                                      address4,
-                                                                      new UUID(
-                                                                               666,
-                                                                               4),
-                                                                      null);
+        ReplicatedState state1 = new ReplicatedState(address1,
+                                                     new UUID(666, 1), null);
+        ReplicatedState state2 = new ReplicatedState(address2,
+                                                     new UUID(666, 2), null);
+        ReplicatedState state3 = new ReplicatedState(address3,
+                                                     new UUID(666, 3), null);
+        ReplicatedState state4 = new ReplicatedState(address4,
+                                                     new UUID(666, 4), null);
 
-        @SuppressWarnings("rawtypes")
-        Gossip<?> gossip = new Gossip(view, random, receiver, communications,
-                                      4, TimeUnit.DAYS, fdFactory, new UUID(0,
-                                                                            0));
+        Gossip gossip = new Gossip(view, random, receiver, communications, 4,
+                                   TimeUnit.DAYS, fdFactory, new UUID(0, 0));
 
         gossip.apply(asList(state1, state2, state3, state4));
 
@@ -102,8 +82,7 @@ public class GossipTest extends TestCase {
 
     public void testApplyUpdate() throws Exception {
         GossipCommunications communications = mock(GossipCommunications.class);
-        @SuppressWarnings("unchecked")
-        final GossipListener<Serializable> receiver = mock(GossipListener.class);
+        final GossipListener receiver = mock(GossipListener.class);
         FailureDetectorFactory fdFactory = mock(FailureDetectorFactory.class);
         SystemView view = mock(SystemView.class);
         Random random = mock(Random.class);
@@ -121,36 +100,20 @@ public class GossipTest extends TestCase {
         InetSocketAddress address3 = new InetSocketAddress("127.0.0.1", 3);
         InetSocketAddress address4 = new InetSocketAddress("127.0.0.1", 4);
 
-        ReplicatedState<Serializable> state1 = new ReplicatedState<Serializable>(
-                                                                                 address1,
-                                                                                 new UUID(
-                                                                                          666,
-                                                                                          1),
-                                                                                 null);
+        ReplicatedState state1 = new ReplicatedState(address1,
+                                                     new UUID(666, 1), null);
         state1.setTime(1);
 
-        ReplicatedState<?> state2 = new ReplicatedState<Serializable>(
-                                                                      address2,
-                                                                      new UUID(
-                                                                               666,
-                                                                               2),
-                                                                      null);
+        ReplicatedState state2 = new ReplicatedState(address2,
+                                                     new UUID(666, 2), null);
         state2.setTime(1);
 
-        ReplicatedState<Serializable> state3 = new ReplicatedState<Serializable>(
-                                                                                 address3,
-                                                                                 new UUID(
-                                                                                          666,
-                                                                                          3),
-                                                                                 null);
+        ReplicatedState state3 = new ReplicatedState(address3,
+                                                     new UUID(666, 3), null);
         state3.setTime(3);
 
-        ReplicatedState<?> state4 = new ReplicatedState<Serializable>(
-                                                                      address4,
-                                                                      new UUID(
-                                                                               666,
-                                                                               4),
-                                                                      null);
+        ReplicatedState state4 = new ReplicatedState(address4,
+                                                     new UUID(666, 4), null);
         state4.setTime(1);
 
         when(ep1.getTime()).thenReturn(0L);
@@ -163,16 +126,11 @@ public class GossipTest extends TestCase {
 
         when(ep4.getTime()).thenReturn(5L);
 
-        Gossip<Serializable> gossip = new Gossip<Serializable>(view, random,
-                                                               receiver,
-                                                               communications,
-                                                               4,
-                                                               TimeUnit.DAYS,
-                                                               fdFactory,
-                                                               new UUID(0, 0)) {
+        Gossip gossip = new Gossip(view, random, receiver, communications, 4,
+                                   TimeUnit.DAYS, fdFactory, new UUID(0, 0)) {
 
             @Override
-            protected void notifyUpdate(ReplicatedState<Serializable> state) {
+            protected void notifyUpdate(ReplicatedState state) {
                 receiver.receive(state);
             }
         };
@@ -188,11 +146,7 @@ public class GossipTest extends TestCase {
         endpoints.put(address3, ep3);
         endpoints.put(address4, ep4);
 
-        @SuppressWarnings("unchecked")
-        List<ReplicatedState<? extends Serializable>> states = asList(state1,
-                                                                      state2,
-                                                                      state3,
-                                                                      state4);
+        List<ReplicatedState> states = asList(state1, state2, state3, state4);
         gossip.apply(states);
 
         verify(ep1, new Times(2)).getTime();
@@ -219,8 +173,7 @@ public class GossipTest extends TestCase {
     }
 
     public void testExamineAllNew() throws Exception {
-        @SuppressWarnings("unchecked")
-        GossipListener<Serializable> listener = mock(GossipListener.class);
+        GossipListener listener = mock(GossipListener.class);
         GossipCommunications communications = mock(GossipCommunications.class);
         GossipMessages gossipHandler = mock(GossipMessages.class);
         FailureDetectorFactory fdFactory = mock(FailureDetectorFactory.class);
@@ -238,26 +191,20 @@ public class GossipTest extends TestCase {
         Digest digest3a = new Digest(new InetSocketAddress("google.com", 3), -1);
         Digest digest4a = new Digest(new InetSocketAddress("google.com", 4), -1);
 
-        Gossip<Serializable> gossip = new Gossip<Serializable>(view, random,
-                                                               listener,
-                                                               communications,
-                                                               4,
-                                                               TimeUnit.DAYS,
-                                                               fdFactory,
-                                                               new UUID(0, 0));
+        Gossip gossip = new Gossip(view, random, listener, communications, 4,
+                                   TimeUnit.DAYS, fdFactory, new UUID(0, 0));
 
         gossip.examine(asList(digest1, digest2, digest3, digest4),
                        gossipHandler);
 
         verify(gossipHandler).reply(asList(digest1a, digest2a, digest3a,
                                            digest4a),
-                                    new ArrayList<ReplicatedState<?>>());
+                                    new ArrayList<ReplicatedState>());
         verifyNoMoreInteractions(gossipHandler);
     }
 
     public void testExamineMixed() throws Exception {
-        @SuppressWarnings("unchecked")
-        GossipListener<Serializable> listener = mock(GossipListener.class);
+        GossipListener listener = mock(GossipListener.class);
         GossipCommunications communications = mock(GossipCommunications.class);
         GossipMessages gossipHandler = mock(GossipMessages.class);
         FailureDetectorFactory fdFactory = mock(FailureDetectorFactory.class);
@@ -280,42 +227,24 @@ public class GossipTest extends TestCase {
         Digest digest1a = new Digest(address1, 1);
         Digest digest3a = new Digest(address3, 3);
 
-        ReplicatedState<Serializable> state1 = new ReplicatedState<Serializable>(
-                                                                                 null,
-                                                                                 new UUID(
-                                                                                          666,
-                                                                                          1),
-                                                                                 address1);
+        ReplicatedState state1 = new ReplicatedState(address1,
+                                                     new UUID(666, 1), null);
         state1.setTime(1);
 
-        ReplicatedState<Serializable> state2 = new ReplicatedState<Serializable>(
-                                                                                 null,
-                                                                                 new UUID(
-                                                                                          666,
-                                                                                          2),
-                                                                                 address2);
+        ReplicatedState state2 = new ReplicatedState(address2,
+                                                     new UUID(666, 2), null);
         state2.setTime(2);
 
-        ReplicatedState<Serializable> state3 = new ReplicatedState<Serializable>(
-                                                                                 null,
-                                                                                 new UUID(
-                                                                                          666,
-                                                                                          3),
-                                                                                 address3);
+        ReplicatedState state3 = new ReplicatedState(address3,
+                                                     new UUID(666, 3), null);
         state3.setTime(3);
 
-        ReplicatedState<Serializable> state4 = new ReplicatedState<Serializable>(
-                                                                                 null,
-                                                                                 new UUID(
-                                                                                          666,
-                                                                                          4),
-                                                                                 address4);
+        ReplicatedState state4 = new ReplicatedState(address4,
+                                                     new UUID(666, 4), null);
         state4.setTime(4);
 
-        Gossip<?> gossip = new Gossip<Serializable>(view, random, listener,
-                                                    communications, 4,
-                                                    TimeUnit.DAYS, fdFactory,
-                                                    new UUID(0, 0));
+        Gossip gossip = new Gossip(view, random, listener, communications, 4,
+                                   TimeUnit.DAYS, fdFactory, new UUID(0, 0));
 
         Field ep = Gossip.class.getDeclaredField("endpoints");
         ep.setAccessible(true);
@@ -328,15 +257,10 @@ public class GossipTest extends TestCase {
         endpoints.put(address3, new Endpoint(state3, fd));
         endpoints.put(address4, new Endpoint(state4, fd));
 
-        List<Digest> digests = asList(digest1, digest2, digest3, digest4);
-        gossip.examine(digests, gossipHandler);
-
-        List<Digest> moreDigests = asList(digest1a, digest3a);
-        @SuppressWarnings("unchecked")
-        List<ReplicatedState<?>> moreStates = new ArrayList<ReplicatedState<?>>(
-                                                                                asList(state2,
-                                                                                       state4));
-        verify(gossipHandler).reply(moreDigests, moreStates);
+        gossip.examine(asList(digest1, digest2, digest3, digest4),
+                       gossipHandler);
+        verify(gossipHandler).reply(asList(digest1a, digest3a),
+                                    asList(state2, state4));
         verifyNoMoreInteractions(gossipHandler);
     }
 }

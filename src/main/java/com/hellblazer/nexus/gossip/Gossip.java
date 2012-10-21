@@ -17,7 +17,6 @@ package com.hellblazer.nexus.gossip;
 import static java.lang.String.format;
 
 import java.io.IOException;
-import java.io.Serializable;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
@@ -72,20 +71,20 @@ import com.hellblazer.nexus.gossip.Digest.DigestComparator;
  * @author <a href="mailto:hal.hildebrand@gmail.com">Hal Hildebrand</a>
  * 
  */
-public class Gossip<T extends Serializable> {
+public class Gossip {
     private final static Logger                              log        = LoggerFactory.getLogger(Gossip.class);
 
     private final GossipCommunications                       communications;
     private final ConcurrentMap<InetSocketAddress, Endpoint> endpoints  = new ConcurrentHashMap<InetSocketAddress, Endpoint>();
     private final Random                                     entropy;
-    private final AtomicReference<ReplicatedState<T>>        localState = new AtomicReference<ReplicatedState<T>>();
+    private final AtomicReference<ReplicatedState>           localState = new AtomicReference<ReplicatedState>();
     private final SystemView                                 view;
     private ScheduledFuture<?>                               gossipTask;
     private final int                                        interval;
     private final TimeUnit                                   intervalUnit;
     private final ScheduledExecutorService                   scheduler;
     private final ExecutorService                            dispatcher;
-    private final GossipListener<T>                          listener;
+    private final GossipListener                             listener;
     private final AtomicBoolean                              running    = new AtomicBoolean();
     private final FailureDetectorFactory                     fdFactory;
     private final Ring                                       ring;
@@ -111,7 +110,7 @@ public class Gossip<T extends Serializable> {
      *            - the reciever of newly acquired heartbeat state
      */
     public Gossip(SystemView systemView, Random random,
-                  GossipListener<T> stateListener,
+                  GossipListener stateListener,
                   GossipCommunications communicationsService,
                   int gossipInterval, TimeUnit unit,
                   FailureDetectorFactory failureDetectorFactory, UUID identity) {
@@ -259,8 +258,7 @@ public class Gossip<T extends Serializable> {
      *            - the handler to send a list of heartbeat states that the
      *            gossiper would like updates for
      */
-    public void reply(List<Digest> digests,
-                      List<ReplicatedState<?>> list,
+    public void reply(List<Digest> digests, List<ReplicatedState> list,
                       GossipMessages gossipHandler) {
         if (log.isTraceEnabled()) {
             log.trace(String.format("Member: %s receiving reply digests: %s states: %s",
@@ -269,7 +267,7 @@ public class Gossip<T extends Serializable> {
         apply(list);
 
         @SuppressWarnings({ "unchecked", "rawtypes" })
-        List<ReplicatedState<?>> deltaState = new ArrayList();
+        List<ReplicatedState> deltaState = new ArrayList();
         for (Digest digest : digests) {
             InetSocketAddress addr = digest.getAddress();
             addUpdatedState(deltaState, addr, digest.getTime());
@@ -283,10 +281,9 @@ public class Gossip<T extends Serializable> {
         }
     }
 
-    public void sendHeartbeat(T replicatedState) {
-        ReplicatedState<T> state = new ReplicatedState<T>(
-                                                          view.getLocalAddress(),
-                                                          id, replicatedState);
+    public void sendHeartbeat(byte[] replicatedState) {
+        ReplicatedState state = new ReplicatedState(view.getLocalAddress(), id,
+                                                    replicatedState);
         state.setTime(System.currentTimeMillis());
         localState.set(state);
         if (log.isDebugEnabled()) {
@@ -307,7 +304,7 @@ public class Gossip<T extends Serializable> {
                || endpoint.shouldConvict(now);
     }
 
-    public void start(ReplicatedState<T> initialHeartbeat) {
+    public void start(ReplicatedState initialHeartbeat) {
         if (running.compareAndSet(false, true)) {
             localState.set(initialHeartbeat);
             communications.start();
@@ -336,7 +333,7 @@ public class Gossip<T extends Serializable> {
      *            - the list of updated heartbeat states we requested from our
      *            partner
      */
-    public void update(List<ReplicatedState<?>> remoteStates) {
+    public void update(List<ReplicatedState> remoteStates) {
         if (log.isTraceEnabled()) {
             log.trace(String.format("Member: %s receiving update states: %s",
                                     getId(), remoteStates));
@@ -344,7 +341,7 @@ public class Gossip<T extends Serializable> {
         apply(remoteStates);
     }
 
-    protected void addUpdatedState(List<ReplicatedState<? extends Serializable>> deltaState,
+    protected void addUpdatedState(List<ReplicatedState> deltaState,
                                    InetSocketAddress endpoint, long time) {
         Endpoint state = endpoints.get(endpoint);
         if (state != null && state.getTime() > time) {
@@ -361,9 +358,8 @@ public class Gossip<T extends Serializable> {
         }
     }
 
-    @SuppressWarnings("unchecked")
-    protected void apply(List<ReplicatedState<?>> list) {
-        for (ReplicatedState<?> remoteState : list) {
+    protected void apply(List<ReplicatedState> list) {
+        for (ReplicatedState remoteState : list) {
             InetSocketAddress endpoint = remoteState.getAddress();
             if (endpoint == null) {
                 if (log.isDebugEnabled()) {
@@ -384,7 +380,7 @@ public class Gossip<T extends Serializable> {
                 if (remoteState.getTime() > local.getTime()) {
                     long oldTime = local.getTime();
                     local.record(remoteState);
-                    notifyUpdate((ReplicatedState<T>) local.getState());
+                    notifyUpdate(local.getState());
                     if (log.isTraceEnabled()) {
                         log.trace(format("Updating heartbeat state time stamp to %s from %s for %s",
                                          local.getTime(), oldTime, endpoint));
@@ -431,9 +427,7 @@ public class Gossip<T extends Serializable> {
      */
     protected void connectAndGossipWith(final InetSocketAddress address,
                                         final List<Digest> digests) {
-        final Endpoint newEndpoint = new Endpoint(
-                                                  new ReplicatedState<T>(
-                                                                         address),
+        final Endpoint newEndpoint = new Endpoint(new ReplicatedState(address),
                                                   fdFactory.create());
         Runnable connectAction = new Runnable() {
             @Override
@@ -467,14 +461,13 @@ public class Gossip<T extends Serializable> {
      *            - the heartbeat state from a previously unconnected member of
      *            the system view
      */
-    protected void discover(final ReplicatedState<?> remoteState) {
+    protected void discover(final ReplicatedState remoteState) {
         final InetSocketAddress address = remoteState.getAddress();
         if (view.getLocalAddress().equals(address)) {
             return; // it's our state, dummy
         }
         final Endpoint endpoint = new Endpoint(remoteState, fdFactory.create());
         Runnable connectAction = new Runnable() {
-            @SuppressWarnings("unchecked")
             @Override
             public void run() {
                 Endpoint previous = endpoints.putIfAbsent(address, endpoint);
@@ -491,7 +484,7 @@ public class Gossip<T extends Serializable> {
                     log.debug(format("Member %s is now UP",
                                      endpoint.getState().getId()));
                 }
-                notifyUpdate((ReplicatedState<T>) endpoint.getState());
+                notifyUpdate(endpoint.getState());
             }
 
         };
@@ -504,8 +497,7 @@ public class Gossip<T extends Serializable> {
                                     getId(), digests));
         }
         List<Digest> deltaDigests = new ArrayList<Digest>();
-        @SuppressWarnings({ "rawtypes", "unchecked" })
-        List<ReplicatedState<? extends Serializable>> deltaState = new ArrayList();
+        List<ReplicatedState> deltaState = new ArrayList<ReplicatedState>();
         for (Digest digest : digests) {
             long remoteTime = digest.getTime();
             Endpoint state = endpoints.get(digest.getAddress());
@@ -626,7 +618,7 @@ public class Gossip<T extends Serializable> {
         return null;
     }
 
-    protected void notifyUpdate(final ReplicatedState<T> state) {
+    protected void notifyUpdate(final ReplicatedState state) {
         assert state != null;
         if (isIgnoring(state.getId())) {
             if (log.isDebugEnabled()) {
