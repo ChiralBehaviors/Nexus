@@ -75,10 +75,6 @@ public class Endpoint {
         fd = failureDetector;
     }
 
-    public long getEpoch() {
-        return state.getEpoch();
-    }
-
     public GossipMessages getHandler() {
         return handler;
     }

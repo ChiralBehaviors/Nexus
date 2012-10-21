@@ -23,10 +23,9 @@ import java.util.UUID;
  * 
  */
 public class ReplicatedState {
-    private final long              epoch = -1;
     private final UUID              id;
     private final byte[]            state;
-    private volatile long           time  = -1L;
+    private volatile long           time = -1L;
     private final InetSocketAddress address;
 
     public ReplicatedState(InetSocketAddress address) {
@@ -55,13 +54,6 @@ public class ReplicatedState {
      */
     public InetSocketAddress getAddress() {
         return address;
-    }
-
-    /**
-     * @return the epoch
-     */
-    public long getEpoch() {
-        return epoch;
     }
 
     /**
@@ -106,8 +98,8 @@ public class ReplicatedState {
      */
     @Override
     public String toString() {
-        return String.format("ReplicatedState [epoch=%s, id=%s, time=%s, address=%s]",
-                             epoch, id, time, address);
+        return String.format("ReplicatedState [id=%s, time=%s, address=%s]",
+                             time, address);
     }
 
     /* (non-Javadoc)
@@ -117,7 +109,6 @@ public class ReplicatedState {
     public int hashCode() {
         final int prime = 31;
         int result = 1;
-        result = prime * result + (int) (epoch ^ (epoch >>> 32));
         result = prime * result + ((id == null) ? 0 : id.hashCode());
         result = prime * result + (int) (time ^ (time >>> 32));
         return result;
@@ -135,8 +126,6 @@ public class ReplicatedState {
         if (getClass() != obj.getClass())
             return false;
         ReplicatedState other = (ReplicatedState) obj;
-        if (epoch != other.epoch)
-            return false;
         if (id == null) {
             if (other.id != null)
                 return false;
