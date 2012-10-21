@@ -51,22 +51,21 @@ import org.slf4j.LoggerFactory;
 import com.hellblazer.nexus.gossip.Digest.DigestComparator;
 
 /**
- * The embodiment of the gossip protocol. This protocol replicates the Anubis
- * heartbeat state and forms both a member discovery and failure detection
- * service. Periodically, the protocol chooses a random member from the system
- * view and initiates a round of gossip with it. A round of gossip is push/pull
- * and involves 3 messages. For example, if node A wants to initiate a round of
- * gossip with node B it starts off by sending node B a gossip message
- * containing a digest of the view number state of the local view of the
- * heartbeat state. Node B on receipt of this message sends node A a reply
- * containing a list of digests representing the updated heartbeat state
- * required, based on the received digests. In addition, the node also sends
- * along a list of updated heartbeat state that is more recent, based on the
- * initial list of digests. On receipt of this message node A sends node B the
- * requested heartbeat state that completes a round of gossip. When messages are
- * received, the protocol updates the endpoint's failure detector with the
- * liveness information. If the endpoint's failure detector predicts that the
- * endpoint has failed, the endpoint is marked dead.
+ * The embodiment of the gossip protocol. This protocol replicates state and
+ * forms both a member discovery and failure detection service. Periodically,
+ * the protocol chooses a random member from the system view and initiates a
+ * round of gossip with it. A round of gossip is push/pull and involves 3
+ * messages. For example, if node A wants to initiate a round of gossip with
+ * node B it starts off by sending node B a gossip message containing a digest
+ * of the view number state of the local view of the replicated state. Node B on
+ * receipt of this message sends node A a reply containing a list of digests
+ * representing the updated state required, based on the received digests. In
+ * addition, the node also sends along a list of updated state that is more
+ * recent, based on the initial list of digests. On receipt of this message node
+ * A sends node B the requested state that completes a round of gossip. When
+ * messages are received, the protocol updates the endpoint's failure detector
+ * with the liveness information. If the endpoint's failure detector predicts
+ * that the endpoint has failed, the endpoint is marked dead.
  * 
  * @author <a href="mailto:hal.hildebrand@gmail.com">Hal Hildebrand</a>
  * 
@@ -106,8 +105,8 @@ public class Gossip {
      *            - time unit for the gossip interval
      * @param failureDetectorFactory
      *            - the factory producing instances of the failure detector
-     * @param heartbeatReceiver
-     *            - the reciever of newly acquired heartbeat state
+     * @param identity
+     *            - the unique identity of this gossip node
      */
     public Gossip(SystemView systemView, Random random,
                   GossipListener stateListener,
@@ -128,9 +127,8 @@ public class Gossip {
             @Override
             public Thread newThread(Runnable r) {
                 int count = 0;
-                Thread daemon = new Thread(r,
-                                           "Gossip heartbeat servicing thread "
-                                                   + count++);
+                Thread daemon = new Thread(r, "Gossip servicing thread "
+                                              + count++);
                 daemon.setDaemon(true);
                 daemon.setUncaughtExceptionHandler(new UncaughtExceptionHandler() {
                     @Override
@@ -160,7 +158,114 @@ public class Gossip {
         });
     }
 
-    public void checkStatus() {
+    public InetSocketAddress getLocalAddress() {
+        return view.getLocalAddress();
+    }
+
+    public boolean isIgnoring(InetSocketAddress address) {
+        Endpoint endpoint = endpoints.get(address);
+        if (endpoint == null) {
+            return false;
+        }
+        return isIgnoring(endpoint.getState().getId());
+    }
+
+    public boolean isIgnoring(UUID id) {
+        return theShunned.contains(id);
+    }
+
+    public void setIgnoring(Collection<UUID> ignoringUpdate) {
+        theShunned.clear();
+        theShunned.addAll(ignoringUpdate);
+    }
+
+    public void start(byte[] initialState) {
+        if (running.compareAndSet(false, true)) {
+            ReplicatedState state = new ReplicatedState(view.getLocalAddress(),
+                                                        id, initialState);
+            state.setTime(System.currentTimeMillis());
+            localState.set(state);
+            communications.start();
+            gossipTask = scheduler.scheduleWithFixedDelay(gossipTask(),
+                                                          interval, interval,
+                                                          intervalUnit);
+        }
+    }
+
+    public void terminate() {
+        if (running.compareAndSet(true, false)) {
+            communications.terminate();
+            scheduler.shutdownNow();
+            gossipTask.cancel(true);
+            gossipTask = null;
+        }
+    }
+
+    public void updateLocalState(byte[] replicatedState) {
+        ReplicatedState state = new ReplicatedState(view.getLocalAddress(), id,
+                                                    replicatedState);
+        state.setTime(System.currentTimeMillis());
+        localState.set(state);
+        if (log.isDebugEnabled()) {
+            log.debug(String.format("Member: %s sending replicated state: %s",
+                                    getId(), state));
+        }
+        ring.update(members, endpoints.values());
+        ring.send(state);
+    }
+
+    protected void addUpdatedState(List<ReplicatedState> deltaState,
+                                   InetSocketAddress endpoint, long time) {
+        Endpoint state = endpoints.get(endpoint);
+        if (state != null && state.getTime() > time) {
+            if (log.isTraceEnabled()) {
+                log.trace(format("local  time stamp %s greater than %s for %s ",
+                                 state.getTime(), time, endpoint));
+            }
+            deltaState.add(state.getState());
+        } else {
+            if (view.getLocalAddress().equals(endpoint)
+                && localState.get().getTime() > time) {
+                deltaState.add(localState.get());
+            }
+        }
+    }
+
+    protected void apply(List<ReplicatedState> list) {
+        for (ReplicatedState remoteState : list) {
+            InetSocketAddress endpoint = remoteState.getAddress();
+            if (endpoint == null) {
+                if (log.isDebugEnabled()) {
+                    log.debug(String.format("endpoint  address is null: "
+                                            + remoteState));
+                }
+                continue;
+            }
+            if (view.isQuarantined(endpoint)) {
+                if (log.isTraceEnabled()) {
+                    log.trace(format("Ignoring gossip for %s because it is a quarantined endpoint",
+                                     remoteState));
+                }
+                continue;
+            }
+            Endpoint local = endpoints.get(endpoint);
+            if (local != null) {
+                if (remoteState.getTime() > local.getTime()) {
+                    long oldTime = local.getTime();
+                    local.record(remoteState);
+                    notifyUpdate(local.getState());
+                    if (log.isTraceEnabled()) {
+                        log.trace(format("Updating  state time stamp to %s from %s for %s",
+                                         local.getTime(), oldTime, endpoint));
+                    }
+                }
+            } else {
+                discover(remoteState);
+            }
+        }
+    }
+
+    protected void checkStatus() {
         long now = System.currentTimeMillis();
         if (log.isTraceEnabled()) {
             log.trace("Checking the status of the living...");
@@ -189,207 +294,6 @@ public class Gossip {
         }
         view.cullQuarantined(now);
         view.cullUnreachable(now);
-    }
-
-    public InetSocketAddress getLocalAddress() {
-        return view.getLocalAddress();
-    }
-
-    /**
-     * Perform the periodic gossip.
-     * 
-     * @param communications
-     *            - the mechanism to send the gossip message to a peer
-     */
-    public void gossip() {
-        List<Digest> digests = randomDigests();
-        if (digests.size() > 0) {
-            InetSocketAddress member = gossipWithTheLiving(digests);
-            gossipWithTheDead(digests);
-            gossipWithSeeds(digests, member);
-        }
-        checkStatus();
-    }
-
-    /**
-     * The first message of the gossip protocol. The gossiping node sends a set
-     * of digests of it's view of the heartbeat state. The receiver replies with
-     * a list of digests indicating the heartbeat state that needs to be updated
-     * on the receiver. The receiver of the gossip also sends along any
-     * heartbeat states which are more recent than what the gossiper sent, based
-     * on the digests provided by the gossiper.
-     * 
-     * @param digests
-     *            - the list of heartbeat state digests
-     * @param gossipHandler
-     *            - the handler to send the reply of digests and heartbeat
-     *            states
-     */
-    public void gossip(List<Digest> digests, GossipMessages gossipHandler) {
-        sort(digests);
-        examine(digests, gossipHandler);
-    }
-
-    public boolean isIgnoring(InetSocketAddress address) {
-        Endpoint endpoint = endpoints.get(address);
-        if (endpoint == null) {
-            return false;
-        }
-        return isIgnoring(endpoint.getState().getId());
-    }
-
-    public boolean isIgnoring(UUID id) {
-        return theShunned.contains(id);
-    }
-
-    /**
-     * The second message in the gossip protocol. This message is sent in reply
-     * to the initial gossip message sent by this node. The response is a list
-     * of digests that represent the heartbeat state that is out of date on the
-     * sender. In addition, the sender also supplies heartbeat state that is
-     * more recent than the digests supplied in the initial gossip message.
-     * 
-     * @param digests
-     *            - the list of digests the gossiper would like to hear about
-     * @param list
-     *            - the list of heartbeat states the gossiper thinks is out of
-     *            date on the receiver
-     * @param gossipHandler
-     *            - the handler to send a list of heartbeat states that the
-     *            gossiper would like updates for
-     */
-    public void reply(List<Digest> digests, List<ReplicatedState> list,
-                      GossipMessages gossipHandler) {
-        if (log.isTraceEnabled()) {
-            log.trace(String.format("Member: %s receiving reply digests: %s states: %s",
-                                    getId(), digests, list));
-        }
-        apply(list);
-
-        @SuppressWarnings({ "unchecked", "rawtypes" })
-        List<ReplicatedState> deltaState = new ArrayList();
-        for (Digest digest : digests) {
-            InetSocketAddress addr = digest.getAddress();
-            addUpdatedState(deltaState, addr, digest.getTime());
-        }
-        if (!deltaState.isEmpty()) {
-            if (log.isTraceEnabled()) {
-                log.trace(String.format("Member: %s sending update states: %s",
-                                        getId(), deltaState));
-            }
-            gossipHandler.update(deltaState);
-        }
-    }
-
-    public void sendHeartbeat(byte[] replicatedState) {
-        ReplicatedState state = new ReplicatedState(view.getLocalAddress(), id,
-                                                    replicatedState);
-        state.setTime(System.currentTimeMillis());
-        localState.set(state);
-        if (log.isDebugEnabled()) {
-            log.debug(String.format("Member: %s sending replicated state: %s",
-                                    getId(), state));
-        }
-        ring.update(members, endpoints.values());
-        ring.send(state);
-    }
-
-    public void setIgnoring(Collection<UUID> ignoringUpdate) {
-        theShunned.addAll(ignoringUpdate);
-    }
-
-    public boolean shouldConvict(InetSocketAddress address, long now) {
-        Endpoint endpoint = endpoints.get(address);
-        return endpoint == null || isIgnoring(endpoint.getState().getId())
-               || endpoint.shouldConvict(now);
-    }
-
-    public void start(ReplicatedState initialHeartbeat) {
-        if (running.compareAndSet(false, true)) {
-            localState.set(initialHeartbeat);
-            communications.start();
-            gossipTask = scheduler.scheduleWithFixedDelay(gossipTask(),
-                                                          interval, interval,
-                                                          intervalUnit);
-        }
-    }
-
-    public void terminate() {
-        if (running.compareAndSet(true, false)) {
-            communications.terminate();
-            scheduler.shutdownNow();
-            gossipTask.cancel(true);
-            gossipTask = null;
-        }
-    }
-
-    /**
-     * The third message of the gossip protocol. This is the final message in
-     * the gossip protocol. The supplied heartbeat state is the updated state
-     * requested by the receiver in response to the digests in the original
-     * gossip message.
-     * 
-     * @param remoteStates
-     *            - the list of updated heartbeat states we requested from our
-     *            partner
-     */
-    public void update(List<ReplicatedState> remoteStates) {
-        if (log.isTraceEnabled()) {
-            log.trace(String.format("Member: %s receiving update states: %s",
-                                    getId(), remoteStates));
-        }
-        apply(remoteStates);
-    }
-
-    protected void addUpdatedState(List<ReplicatedState> deltaState,
-                                   InetSocketAddress endpoint, long time) {
-        Endpoint state = endpoints.get(endpoint);
-        if (state != null && state.getTime() > time) {
-            if (log.isTraceEnabled()) {
-                log.trace(format("local heartbeat time stamp %s greater than %s for %s ",
-                                 state.getTime(), time, endpoint));
-            }
-            deltaState.add(state.getState());
-        } else {
-            if (view.getLocalAddress().equals(endpoint)
-                && localState.get().getTime() > time) {
-                deltaState.add(localState.get());
-            }
-        }
-    }
-
-    protected void apply(List<ReplicatedState> list) {
-        for (ReplicatedState remoteState : list) {
-            InetSocketAddress endpoint = remoteState.getAddress();
-            if (endpoint == null) {
-                if (log.isDebugEnabled()) {
-                    log.debug(String.format("endpoint heartbeat address is null: "
-                                            + remoteState));
-                }
-                continue;
-            }
-            if (view.isQuarantined(endpoint)) {
-                if (log.isTraceEnabled()) {
-                    log.trace(format("Ignoring gossip for %s because it is a quarantined endpoint",
-                                     remoteState));
-                }
-                continue;
-            }
-            Endpoint local = endpoints.get(endpoint);
-            if (local != null) {
-                if (remoteState.getTime() > local.getTime()) {
-                    long oldTime = local.getTime();
-                    local.record(remoteState);
-                    notifyUpdate(local.getState());
-                    if (log.isTraceEnabled()) {
-                        log.trace(format("Updating heartbeat state time stamp to %s from %s for %s",
-                                         local.getTime(), oldTime, endpoint));
-                    }
-                }
-            } else {
-                discover(remoteState);
-            }
-        }
     }
 
     /**
@@ -458,8 +362,8 @@ public class Gossip {
      * Discover a connection with a previously unconnected member
      * 
      * @param remoteState
-     *            - the heartbeat state from a previously unconnected member of
-     *            the system view
+     *            - the state from a previously unconnected member of the system
+     *            view
      */
     protected void discover(final ReplicatedState remoteState) {
         final InetSocketAddress address = remoteState.getAddress();
@@ -534,6 +438,40 @@ public class Gossip {
 
     protected UUID getId() {
         return localState.get().getId();
+    }
+
+    /**
+     * Perform the periodic gossip.
+     * 
+     * @param communications
+     *            - the mechanism to send the gossip message to a peer
+     */
+    protected void gossip() {
+        List<Digest> digests = randomDigests();
+        if (digests.size() > 0) {
+            InetSocketAddress member = gossipWithTheLiving(digests);
+            gossipWithTheDead(digests);
+            gossipWithSeeds(digests, member);
+        }
+        checkStatus();
+    }
+
+    /**
+     * The first message of the gossip protocol. The gossiping node sends a set
+     * of digests of it's view of the replicated state. The receiver replies
+     * with a list of digests indicating the state that needs to be updated on
+     * the receiver. The receiver of the gossip also sends along any states
+     * which are more recent than what the gossiper sent, based on the digests
+     * provided by the gossiper.
+     * 
+     * @param digests
+     *            - the list of replicated state digests
+     * @param gossipHandler
+     *            - the handler to send the reply of digests and states
+     */
+    protected void gossip(List<Digest> digests, GossipMessages gossipHandler) {
+        sort(digests);
+        examine(digests, gossipHandler);
     }
 
     protected Runnable gossipTask() {
@@ -653,6 +591,51 @@ public class Gossip {
         return digests;
     }
 
+    /**
+     * The second message in the gossip protocol. This message is sent in reply
+     * to the initial gossip message sent by this node. The response is a list
+     * of digests that represent the replicated state that is out of date on the
+     * sender. In addition, the sender also supplies replicated state that is
+     * more recent than the digests supplied in the initial gossip message.
+     * 
+     * @param digests
+     *            - the list of digests the gossiper would like to hear about
+     * @param list
+     *            - the list of replicated states the gossiper thinks is out of
+     *            date on the receiver
+     * @param gossipHandler
+     *            - the handler to send a list of replicated states that the
+     *            gossiper would like updates for
+     */
+    protected void reply(List<Digest> digests, List<ReplicatedState> list,
+                         GossipMessages gossipHandler) {
+        if (log.isTraceEnabled()) {
+            log.trace(String.format("Member: %s receiving reply digests: %s states: %s",
+                                    getId(), digests, list));
+        }
+        apply(list);
+
+        @SuppressWarnings({ "unchecked", "rawtypes" })
+        List<ReplicatedState> deltaState = new ArrayList();
+        for (Digest digest : digests) {
+            InetSocketAddress addr = digest.getAddress();
+            addUpdatedState(deltaState, addr, digest.getTime());
+        }
+        if (!deltaState.isEmpty()) {
+            if (log.isTraceEnabled()) {
+                log.trace(String.format("Member: %s sending update states: %s",
+                                        getId(), deltaState));
+            }
+            gossipHandler.update(deltaState);
+        }
+    }
+
+    protected boolean shouldConvict(InetSocketAddress address, long now) {
+        Endpoint endpoint = endpoints.get(address);
+        return endpoint == null || isIgnoring(endpoint.getState().getId())
+               || endpoint.shouldConvict(now);
+    }
+
     protected void sort(List<Digest> digests) {
         Map<InetSocketAddress, Digest> endpoint2digest = new HashMap<InetSocketAddress, Digest>();
         for (Digest digest : digests) {
@@ -677,6 +660,22 @@ public class Gossip {
         if (log.isTraceEnabled()) {
             log.trace(format("Sorted gossip digests are : %s", digests));
         }
+    }
+
+    /**
+     * The third message of the gossip protocol. This is the final message in
+     * the gossip protocol. The supplied state is the updated state requested by
+     * the receiver in response to the digests in the original gossip message.
+     * 
+     * @param remoteStates
+     *            - the list of updated states we requested from our partner
+     */
+    protected void update(List<ReplicatedState> remoteStates) {
+        if (log.isTraceEnabled()) {
+            log.trace(String.format("Member: %s receiving update states: %s",
+                                    getId(), remoteStates));
+        }
+        apply(remoteStates);
     }
 
 }

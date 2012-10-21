@@ -12,7 +12,7 @@
  * See the License for the specific language governing permissions and 
  * limitations under the License.
  */
-package com.hellblazer.nexus.gossip.udp;
+package com.hellblazer.nexus.gossip;
 
 import static com.hellblazer.nexus.gossip.GossipMessages.DIGEST_BYTE_SIZE;
 import static com.hellblazer.nexus.gossip.GossipMessages.GOSSIP;
@@ -43,12 +43,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.hellblazer.nexus.gossip.Digest;
-import com.hellblazer.nexus.gossip.Endpoint;
-import com.hellblazer.nexus.gossip.Gossip;
-import com.hellblazer.nexus.gossip.GossipCommunications;
-import com.hellblazer.nexus.gossip.GossipMessages;
-import com.hellblazer.nexus.gossip.ReplicatedState;
 import com.hellblazer.nexus.util.ByteBufferPool;
 import com.hellblazer.nexus.util.HexDump;
 
