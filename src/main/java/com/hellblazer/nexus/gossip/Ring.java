@@ -23,13 +23,13 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class Ring<T> {
-    private final GossipCommunications<T>            comms;
+public class Ring {
+    private final GossipCommunications               comms;
     private final AtomicReference<InetSocketAddress> neighbor = new AtomicReference<InetSocketAddress>();
     private final UUID                               id;
     private static final Logger                      log      = LoggerFactory.getLogger(Ring.class.getCanonicalName());
 
-    public Ring(UUID identity, GossipCommunications<T> comms) {
+    public Ring(UUID identity, GossipCommunications comms) {
         id = identity;
         this.comms = comms;
     }
@@ -39,7 +39,7 @@ public class Ring<T> {
      * 
      * @param state
      */
-    public void send(ReplicatedState<T> state) {
+    public void send(ReplicatedState<?> state) {
         InetSocketAddress l = neighbor.get();
         if (l == null) {
             if (log.isTraceEnabled()) {
@@ -57,8 +57,7 @@ public class Ring<T> {
      * @param members
      * @param endpoints
      */
-    public void update(SortedSet<UUID> members,
-                       Collection<Endpoint<T>> endpoints) {
+    public void update(SortedSet<UUID> members, Collection<Endpoint> endpoints) {
         UUID n = leftNeighborOf(members, id);
         if (n == null) {
             if (log.isTraceEnabled()) {
@@ -68,7 +67,7 @@ public class Ring<T> {
             return;
         }
         InetSocketAddress l = null;
-        for (Endpoint<T> endpoint : endpoints) {
+        for (Endpoint endpoint : endpoints) {
             UUID identity = endpoint.getState().getId();
             if (identity != null) {
                 UUID eid = identity;

@@ -17,6 +17,7 @@ package com.hellblazer.nexus.gossip;
 import static java.lang.String.format;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
@@ -71,26 +72,26 @@ import com.hellblazer.nexus.gossip.Digest.DigestComparator;
  * @author <a href="mailto:hal.hildebrand@gmail.com">Hal Hildebrand</a>
  * 
  */
-public class Gossip<T> {
-    private final static Logger                                 log        = LoggerFactory.getLogger(Gossip.class);
+public class Gossip<T extends Serializable> {
+    private final static Logger                              log        = LoggerFactory.getLogger(Gossip.class);
 
-    private final GossipCommunications<T>                       communications;
-    private final ConcurrentMap<InetSocketAddress, Endpoint<T>> endpoints  = new ConcurrentHashMap<InetSocketAddress, Endpoint<T>>();
-    private final Random                                        entropy;
-    private final AtomicReference<ReplicatedState<T>>           localState = new AtomicReference<ReplicatedState<T>>();
-    private final SystemView                                    view;
-    private ScheduledFuture<?>                                  gossipTask;
-    private final int                                           interval;
-    private final TimeUnit                                      intervalUnit;
-    private final ScheduledExecutorService                      scheduler;
-    private final ExecutorService                               dispatcher;
-    private final GossipListener<T>                             listener;
-    private final AtomicBoolean                                 running    = new AtomicBoolean();
-    private final FailureDetectorFactory                        fdFactory;
-    private final Ring<T>                                       ring;
-    private final Set<UUID>                                     theShunned = new HashSet<UUID>();
-    private final UUID                                          id;
-    private final SortedSet<UUID>                               members    = new ConcurrentSkipListSet<UUID>();
+    private final GossipCommunications                       communications;
+    private final ConcurrentMap<InetSocketAddress, Endpoint> endpoints  = new ConcurrentHashMap<InetSocketAddress, Endpoint>();
+    private final Random                                     entropy;
+    private final AtomicReference<ReplicatedState<T>>        localState = new AtomicReference<ReplicatedState<T>>();
+    private final SystemView                                 view;
+    private ScheduledFuture<?>                               gossipTask;
+    private final int                                        interval;
+    private final TimeUnit                                   intervalUnit;
+    private final ScheduledExecutorService                   scheduler;
+    private final ExecutorService                            dispatcher;
+    private final GossipListener<T>                          listener;
+    private final AtomicBoolean                              running    = new AtomicBoolean();
+    private final FailureDetectorFactory                     fdFactory;
+    private final Ring                                       ring;
+    private final Set<UUID>                                  theShunned = new HashSet<UUID>();
+    private final UUID                                       id;
+    private final SortedSet<UUID>                            members    = new ConcurrentSkipListSet<UUID>();
 
     /**
      * 
@@ -111,7 +112,7 @@ public class Gossip<T> {
      */
     public Gossip(SystemView systemView, Random random,
                   GossipListener<T> stateListener,
-                  GossipCommunications<T> communicationsService,
+                  GossipCommunications communicationsService,
                   int gossipInterval, TimeUnit unit,
                   FailureDetectorFactory failureDetectorFactory, UUID identity) {
         communications = communicationsService;
@@ -123,7 +124,7 @@ public class Gossip<T> {
         intervalUnit = unit;
         fdFactory = failureDetectorFactory;
         id = identity;
-        ring = new Ring<T>(id, communications);
+        ring = new Ring(id, communications);
         scheduler = Executors.newSingleThreadScheduledExecutor(new ThreadFactory() {
             @Override
             public Thread newThread(Runnable r) {
@@ -165,14 +166,14 @@ public class Gossip<T> {
         if (log.isTraceEnabled()) {
             log.trace("Checking the status of the living...");
         }
-        for (Iterator<Entry<InetSocketAddress, Endpoint<T>>> iterator = endpoints.entrySet().iterator(); iterator.hasNext();) {
-            Entry<InetSocketAddress, Endpoint<T>> entry = iterator.next();
+        for (Iterator<Entry<InetSocketAddress, Endpoint>> iterator = endpoints.entrySet().iterator(); iterator.hasNext();) {
+            Entry<InetSocketAddress, Endpoint> entry = iterator.next();
             InetSocketAddress endpoint = entry.getKey();
             if (endpoint.equals(view.getLocalAddress())) {
                 continue;
             }
 
-            Endpoint<T> state = entry.getValue();
+            Endpoint state = entry.getValue();
             if (state.isAlive() && state.shouldConvict(now)) {
                 iterator.remove();
                 state.markDead();
@@ -202,7 +203,7 @@ public class Gossip<T> {
      *            - the mechanism to send the gossip message to a peer
      */
     public void gossip() {
-        List<Digest<T>> digests = randomDigests();
+        List<Digest> digests = randomDigests();
         if (digests.size() > 0) {
             InetSocketAddress member = gossipWithTheLiving(digests);
             gossipWithTheDead(digests);
@@ -225,13 +226,13 @@ public class Gossip<T> {
      *            - the handler to send the reply of digests and heartbeat
      *            states
      */
-    public void gossip(List<Digest<T>> digests, GossipMessages<T> gossipHandler) {
+    public void gossip(List<Digest> digests, GossipMessages gossipHandler) {
         sort(digests);
         examine(digests, gossipHandler);
     }
 
     public boolean isIgnoring(InetSocketAddress address) {
-        Endpoint<T> endpoint = endpoints.get(address);
+        Endpoint endpoint = endpoints.get(address);
         if (endpoint == null) {
             return false;
         }
@@ -251,24 +252,25 @@ public class Gossip<T> {
      * 
      * @param digests
      *            - the list of digests the gossiper would like to hear about
-     * @param remoteStates
+     * @param list
      *            - the list of heartbeat states the gossiper thinks is out of
      *            date on the receiver
      * @param gossipHandler
      *            - the handler to send a list of heartbeat states that the
      *            gossiper would like updates for
      */
-    public void reply(List<Digest<T>> digests,
-                      List<ReplicatedState<T>> remoteStates,
-                      GossipMessages<T> gossipHandler) {
+    public void reply(List<Digest> digests,
+                      List<ReplicatedState<?>> list,
+                      GossipMessages gossipHandler) {
         if (log.isTraceEnabled()) {
             log.trace(String.format("Member: %s receiving reply digests: %s states: %s",
-                                    getId(), digests, remoteStates));
+                                    getId(), digests, list));
         }
-        apply(remoteStates);
+        apply(list);
 
-        List<ReplicatedState<T>> deltaState = new ArrayList<ReplicatedState<T>>();
-        for (Digest<T> digest : digests) {
+        @SuppressWarnings({ "unchecked", "rawtypes" })
+        List<ReplicatedState<?>> deltaState = new ArrayList();
+        for (Digest digest : digests) {
             InetSocketAddress addr = digest.getAddress();
             addUpdatedState(deltaState, addr, digest.getTime());
         }
@@ -300,7 +302,7 @@ public class Gossip<T> {
     }
 
     public boolean shouldConvict(InetSocketAddress address, long now) {
-        Endpoint<T> endpoint = endpoints.get(address);
+        Endpoint endpoint = endpoints.get(address);
         return endpoint == null || isIgnoring(endpoint.getState().getId())
                || endpoint.shouldConvict(now);
     }
@@ -334,7 +336,7 @@ public class Gossip<T> {
      *            - the list of updated heartbeat states we requested from our
      *            partner
      */
-    public void update(List<ReplicatedState<T>> remoteStates) {
+    public void update(List<ReplicatedState<?>> remoteStates) {
         if (log.isTraceEnabled()) {
             log.trace(String.format("Member: %s receiving update states: %s",
                                     getId(), remoteStates));
@@ -342,9 +344,9 @@ public class Gossip<T> {
         apply(remoteStates);
     }
 
-    protected void addUpdatedState(List<ReplicatedState<T>> deltaState,
+    protected void addUpdatedState(List<ReplicatedState<? extends Serializable>> deltaState,
                                    InetSocketAddress endpoint, long time) {
-        Endpoint<T> state = endpoints.get(endpoint);
+        Endpoint state = endpoints.get(endpoint);
         if (state != null && state.getTime() > time) {
             if (log.isTraceEnabled()) {
                 log.trace(format("local heartbeat time stamp %s greater than %s for %s ",
@@ -359,8 +361,9 @@ public class Gossip<T> {
         }
     }
 
-    protected void apply(List<ReplicatedState<T>> remoteStates) {
-        for (ReplicatedState<T> remoteState : remoteStates) {
+    @SuppressWarnings("unchecked")
+    protected void apply(List<ReplicatedState<?>> list) {
+        for (ReplicatedState<?> remoteState : list) {
             InetSocketAddress endpoint = remoteState.getAddress();
             if (endpoint == null) {
                 if (log.isDebugEnabled()) {
@@ -376,12 +379,12 @@ public class Gossip<T> {
                 }
                 continue;
             }
-            Endpoint<T> local = endpoints.get(endpoint);
+            Endpoint local = endpoints.get(endpoint);
             if (local != null) {
                 if (remoteState.getTime() > local.getTime()) {
                     long oldTime = local.getTime();
                     local.record(remoteState);
-                    notifyUpdate(local.getState());
+                    notifyUpdate((ReplicatedState<T>) local.getState());
                     if (log.isTraceEnabled()) {
                         log.trace(format("Updating heartbeat state time stamp to %s from %s for %s",
                                          local.getTime(), oldTime, endpoint));
@@ -405,7 +408,7 @@ public class Gossip<T> {
      *            established
      */
     protected void connect(final InetSocketAddress address,
-                           final Endpoint<T> endpoint, Runnable connectAction) {
+                           final Endpoint endpoint, Runnable connectAction) {
         try {
             communications.connect(address, endpoint, connectAction);
         } catch (IOException e) {
@@ -427,16 +430,15 @@ public class Gossip<T> {
      *            - the digests in question
      */
     protected void connectAndGossipWith(final InetSocketAddress address,
-                                        final List<Digest<T>> digests) {
-        final Endpoint<T> newEndpoint = new Endpoint<T>(
-                                                        new ReplicatedState<T>(
-                                                                               address),
-                                                        fdFactory.create());
+                                        final List<Digest> digests) {
+        final Endpoint newEndpoint = new Endpoint(
+                                                  new ReplicatedState<T>(
+                                                                         address),
+                                                  fdFactory.create());
         Runnable connectAction = new Runnable() {
             @Override
             public void run() {
-                Endpoint<T> previous = endpoints.putIfAbsent(address,
-                                                             newEndpoint);
+                Endpoint previous = endpoints.putIfAbsent(address, newEndpoint);
                 if (previous != null) {
                     newEndpoint.getHandler().close();
                     if (log.isDebugEnabled()) {
@@ -450,8 +452,8 @@ public class Gossip<T> {
                     log.debug(format("Member %s is now CONNECTED",
                                      newEndpoint.getState().getId()));
                 }
-                List<Digest<T>> newDigests = new ArrayList<Digest<T>>(digests);
-                newDigests.add(new Digest<T>(address, -1));
+                List<Digest> newDigests = new ArrayList<Digest>(digests);
+                newDigests.add(new Digest(address, -1));
                 newEndpoint.getHandler().gossip(newDigests);
             }
         };
@@ -461,20 +463,21 @@ public class Gossip<T> {
     /**
      * Discover a connection with a previously unconnected member
      * 
-     * @param state
+     * @param remoteState
      *            - the heartbeat state from a previously unconnected member of
      *            the system view
      */
-    protected void discover(final ReplicatedState<T> state) {
-        final InetSocketAddress address = state.getAddress();
+    protected void discover(final ReplicatedState<?> remoteState) {
+        final InetSocketAddress address = remoteState.getAddress();
         if (view.getLocalAddress().equals(address)) {
             return; // it's our state, dummy
         }
-        final Endpoint<T> endpoint = new Endpoint<T>(state, fdFactory.create());
+        final Endpoint endpoint = new Endpoint(remoteState, fdFactory.create());
         Runnable connectAction = new Runnable() {
+            @SuppressWarnings("unchecked")
             @Override
             public void run() {
-                Endpoint<T> previous = endpoints.putIfAbsent(address, endpoint);
+                Endpoint previous = endpoints.putIfAbsent(address, endpoint);
                 if (previous != null) {
                     endpoint.getHandler().close();
                     if (log.isDebugEnabled()) {
@@ -488,32 +491,31 @@ public class Gossip<T> {
                     log.debug(format("Member %s is now UP",
                                      endpoint.getState().getId()));
                 }
-                notifyUpdate(endpoint.getState());
+                notifyUpdate((ReplicatedState<T>) endpoint.getState());
             }
 
         };
         connect(address, endpoint, connectAction);
     }
 
-    protected void examine(List<Digest<T>> digests,
-                           GossipMessages<T> gossipHandler) {
+    protected void examine(List<Digest> digests, GossipMessages gossipHandler) {
         if (log.isTraceEnabled()) {
             log.trace(String.format("Member: %s receiving gossip digests: %s",
                                     getId(), digests));
         }
-        List<Digest<T>> deltaDigests = new ArrayList<Digest<T>>();
-        List<ReplicatedState<T>> deltaState = new ArrayList<ReplicatedState<T>>();
-        for (Digest<T> digest : digests) {
+        List<Digest> deltaDigests = new ArrayList<Digest>();
+        @SuppressWarnings({ "rawtypes", "unchecked" })
+        List<ReplicatedState<? extends Serializable>> deltaState = new ArrayList();
+        for (Digest digest : digests) {
             long remoteTime = digest.getTime();
-            Endpoint<T> state = endpoints.get(digest.getAddress());
+            Endpoint state = endpoints.get(digest.getAddress());
             if (state != null) {
                 long localTime = state.getTime();
                 if (remoteTime == localTime) {
                     continue;
                 }
                 if (remoteTime > localTime) {
-                    deltaDigests.add(new Digest<T>(digest.getAddress(),
-                                                   localTime));
+                    deltaDigests.add(new Digest(digest.getAddress(), localTime));
                 } else if (remoteTime < localTime) {
                     addUpdatedState(deltaState, digest.getAddress(), remoteTime);
                 }
@@ -521,7 +523,7 @@ public class Gossip<T> {
                 if (view.getLocalAddress().equals(digest.getAddress())) {
                     addUpdatedState(deltaState, digest.getAddress(), remoteTime);
                 } else {
-                    deltaDigests.add(new Digest<T>(digest.getAddress(), -1));
+                    deltaDigests.add(new Digest(digest.getAddress(), -1));
                 }
             }
         }
@@ -565,13 +567,13 @@ public class Gossip<T> {
      * @param member
      *            - the live member we've gossiped with.
      */
-    protected void gossipWithSeeds(final List<Digest<T>> digests,
+    protected void gossipWithSeeds(final List<Digest> digests,
                                    InetSocketAddress member) {
         InetSocketAddress address = view.getRandomSeedMember(member);
         if (address == null) {
             return;
         }
-        Endpoint<T> endpoint = endpoints.get(address);
+        Endpoint endpoint = endpoints.get(address);
         if (endpoint != null) {
             endpoint.getHandler().gossip(digests);
         } else {
@@ -586,7 +588,7 @@ public class Gossip<T> {
      * @param digests
      *            - the digests of interest
      */
-    protected void gossipWithTheDead(List<Digest<T>> digests) {
+    protected void gossipWithTheDead(List<Digest> digests) {
         InetSocketAddress address = view.getRandomUnreachableMember();
         if (address == null) {
             return;
@@ -601,12 +603,12 @@ public class Gossip<T> {
      *            - the digests of interest
      * @return the address of the member contacted
      */
-    protected InetSocketAddress gossipWithTheLiving(List<Digest<T>> digests) {
+    protected InetSocketAddress gossipWithTheLiving(List<Digest> digests) {
         InetSocketAddress address = view.getRandomLiveMember();
         if (address == null) {
             return null;
         }
-        Endpoint<T> endpoint = endpoints.get(address);
+        Endpoint endpoint = endpoints.get(address);
         if (endpoint != null) {
             if (log.isTraceEnabled()) {
                 log.trace(format("%s gossiping with: %s, #digests: %s",
@@ -646,13 +648,12 @@ public class Gossip<T> {
         ring.send(state);
     }
 
-    protected List<Digest<T>> randomDigests() {
-        ArrayList<Digest<T>> digests = new ArrayList<Digest<T>>(
-                                                                endpoints.size() + 1);
-        for (Entry<InetSocketAddress, Endpoint<T>> entry : endpoints.entrySet()) {
-            digests.add(new Digest<T>(entry.getKey(), entry.getValue()));
+    protected List<Digest> randomDigests() {
+        ArrayList<Digest> digests = new ArrayList<Digest>(endpoints.size() + 1);
+        for (Entry<InetSocketAddress, Endpoint> entry : endpoints.entrySet()) {
+            digests.add(new Digest(entry.getKey(), entry.getValue()));
         }
-        digests.add(new Digest<T>(localState.get()));
+        digests.add(new Digest(localState.get()));
         Collections.shuffle(digests, entropy);
         if (log.isTraceEnabled()) {
             log.trace(format("Gossip digests are : %s", digests));
@@ -660,21 +661,20 @@ public class Gossip<T> {
         return digests;
     }
 
-    protected void sort(List<Digest<T>> digests) {
-        Map<InetSocketAddress, Digest<T>> endpoint2digest = new HashMap<InetSocketAddress, Digest<T>>();
-        for (Digest<T> digest : digests) {
+    protected void sort(List<Digest> digests) {
+        Map<InetSocketAddress, Digest> endpoint2digest = new HashMap<InetSocketAddress, Digest>();
+        for (Digest digest : digests) {
             endpoint2digest.put(digest.getAddress(), digest);
         }
 
-        @SuppressWarnings("unchecked")
-        Digest<T>[] diffDigests = new Digest[digests.size()];
+        Digest[] diffDigests = new Digest[digests.size()];
         int i = 0;
-        for (Digest<T> gDigest : digests) {
+        for (Digest gDigest : digests) {
             InetSocketAddress ep = gDigest.getAddress();
-            Endpoint<T> state = endpoints.get(ep);
+            Endpoint state = endpoints.get(ep);
             long time = state != null ? state.getTime() : -1;
             long diffTime = Math.abs(time - gDigest.getTime());
-            diffDigests[i++] = new Digest<T>(ep, diffTime);
+            diffDigests[i++] = new Digest(ep, diffTime);
         }
 
         Arrays.sort(diffDigests, new DigestComparator());

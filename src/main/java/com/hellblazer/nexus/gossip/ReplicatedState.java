@@ -14,6 +14,7 @@
  */
 package com.hellblazer.nexus.gossip;
 
+import java.io.Serializable;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.UUID;
@@ -22,7 +23,7 @@ import java.util.UUID;
  * @author hhildebrand
  * 
  */
-public class ReplicatedState<T> {
+public class ReplicatedState<T extends Serializable> {
     private final long              epoch = -1;
     private final UUID              id;
     private final T                 state;
@@ -99,5 +100,51 @@ public class ReplicatedState<T> {
     public void writeTo(ByteBuffer buffer) {
         // TODO Auto-generated method stub
 
+    }
+
+    /* (non-Javadoc)
+     * @see java.lang.Object#toString()
+     */
+    @Override
+    public String toString() {
+        return String.format("ReplicatedState [epoch=%s, id=%s, time=%s, address=%s]",
+                             epoch, id, time, address);
+    }
+
+    /* (non-Javadoc)
+     * @see java.lang.Object#hashCode()
+     */
+    @Override
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + (int) (epoch ^ (epoch >>> 32));
+        result = prime * result + ((id == null) ? 0 : id.hashCode());
+        result = prime * result + (int) (time ^ (time >>> 32));
+        return result;
+    }
+
+    /* (non-Javadoc)
+     * @see java.lang.Object#equals(java.lang.Object)
+     */
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj)
+            return true;
+        if (obj == null)
+            return false;
+        if (getClass() != obj.getClass())
+            return false;
+        ReplicatedState<?> other = (ReplicatedState<?>) obj;
+        if (epoch != other.epoch)
+            return false;
+        if (id == null) {
+            if (other.id != null)
+                return false;
+        } else if (!id.equals(other.id))
+            return false;
+        if (time != other.time)
+            return false;
+        return true;
     }
 }

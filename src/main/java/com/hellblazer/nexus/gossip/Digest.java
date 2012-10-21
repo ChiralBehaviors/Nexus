@@ -30,13 +30,13 @@ import java.util.Comparator;
  * @author <a href="mailto:hal.hildebrand@gmail.com">Hal Hildebrand</a>
  * 
  */
-public class Digest<T> {
+public class Digest {
     public static class DigestComparator implements Serializable,
-            Comparator<Digest<?>> {
+            Comparator<Digest> {
         private static final long serialVersionUID = 1L;
 
         @Override
-        public int compare(Digest<?> digest1, Digest<?> digest2) {
+        public int compare(Digest digest1, Digest digest2) {
             return (int) (digest1.time - digest2.time);
         }
     }
@@ -50,13 +50,13 @@ public class Digest<T> {
         time = msg.getLong();
     }
 
-    public Digest(ReplicatedState<T> state) {
+    public Digest(ReplicatedState<?> state) {
         address = state.getAddress();
         assert address != null : "Null replicated state address";
         time = state.getTime();
     }
 
-    public Digest(InetSocketAddress socketAddress, Endpoint<T> ep) {
+    public Digest(InetSocketAddress socketAddress, Endpoint ep) {
         address = socketAddress;
         assert address != null : "Null digest address address";
         time = ep.getTime();
@@ -78,7 +78,7 @@ public class Digest<T> {
         if (getClass() != obj.getClass()) {
             return false;
         }
-        Digest<?> other = (Digest<?>) obj;
+        Digest other = (Digest) obj;
         if (address == null) {
             if (other.address != null) {
                 return false;

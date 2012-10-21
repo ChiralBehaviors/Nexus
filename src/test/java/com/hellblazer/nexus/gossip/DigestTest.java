@@ -12,7 +12,7 @@
  * See the License for the specific language governing permissions and 
  * limitations under the License.
  */
-package com.hellblazer.jackal.gossip;
+package com.hellblazer.nexus.gossip;
 
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -20,8 +20,8 @@ import java.nio.ByteBuffer;
 import junit.framework.TestCase;
 
 import com.hellblazer.nexus.gossip.Digest;
-import com.hellblazer.nexus.gossip.GossipMessages;
 import com.hellblazer.nexus.gossip.Digest.DigestComparator;
+import com.hellblazer.nexus.gossip.GossipMessages;
 
 /**
  * Basic testing of the digest state

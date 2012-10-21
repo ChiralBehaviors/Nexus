@@ -23,7 +23,7 @@ import java.net.InetSocketAddress;
  * @author <a href="mailto:hal.hildebrand@gmail.com">Hal Hildebrand</a>
  */
 
-public interface GossipCommunications<T> {
+public interface GossipCommunications {
 
     /**
      * Asynchronously create a new connection to the indicated address. When the
@@ -42,7 +42,7 @@ public interface GossipCommunications<T> {
      * @throws IOException
      *             - if there is a problem creating a connection to the address
      */
-    void connect(InetSocketAddress address, Endpoint<T> endpoint,
+    void connect(InetSocketAddress address, Endpoint endpoint,
                  Runnable connectAction) throws IOException;
 
     /**
@@ -58,14 +58,14 @@ public interface GossipCommunications<T> {
      * @param state
      * @param inetSocketAddress
      */
-    void send(ReplicatedState<T> state, InetSocketAddress inetSocketAddress);
+    void send(ReplicatedState<?> state, InetSocketAddress inetSocketAddress);
 
     /**
      * Set the gossip service
      * 
      * @param gossip
      */
-    void setGossip(Gossip<T> gossip);
+    void setGossip(Gossip<?> gossip);
 
     /**
      * Start the communications service

@@ -14,6 +14,7 @@
  */
 package com.hellblazer.nexus.gossip;
 
+import java.io.Serializable;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
@@ -30,7 +31,7 @@ import org.slf4j.LoggerFactory;
  * 
  */
 
-public class Endpoint<T> {
+public class Endpoint {
     protected static Logger logger = LoggerFactory.getLogger(Endpoint.class);
 
     public static InetSocketAddress readInetAddress(ByteBuffer msg)
@@ -61,15 +62,15 @@ public class Endpoint<T> {
     }
 
     private final FailureDetector       fd;
-    private volatile GossipMessages<T>  handler;
-    private volatile ReplicatedState<T> state;
+    private volatile GossipMessages     handler;
+    private volatile ReplicatedState<?> state;
     private volatile boolean            isAlive = true;
 
     public Endpoint() {
         fd = null;
     }
 
-    public Endpoint(ReplicatedState<T> replicatedState,
+    public Endpoint(ReplicatedState<?> replicatedState,
                     FailureDetector failureDetector) {
         state = replicatedState;
         fd = failureDetector;
@@ -79,12 +80,13 @@ public class Endpoint<T> {
         return state.getEpoch();
     }
 
-    public GossipMessages<T> getHandler() {
+    public GossipMessages getHandler() {
         return handler;
     }
 
-    public ReplicatedState<T> getState() {
-        return state;
+    @SuppressWarnings("unchecked")
+    public <T extends Serializable> ReplicatedState<T> getState() {
+        return (ReplicatedState<T>) state;
     }
 
     public long getTime() {
@@ -103,14 +105,14 @@ public class Endpoint<T> {
         isAlive = false;
     }
 
-    public void record(ReplicatedState<T> newState) {
+    public void record(ReplicatedState<?> newState) {
         if (state != newState) {
             state = newState;
             fd.record(state.getTime(), System.currentTimeMillis());
         }
     }
 
-    public void setCommunications(GossipMessages<T> communications) {
+    public void setCommunications(GossipMessages communications) {
         handler = communications;
     }
 
@@ -132,7 +134,7 @@ public class Endpoint<T> {
         return "Endpoint " + state.getId();
     }
 
-    public void updateState(ReplicatedState<T> newState) {
+    public void updateState(ReplicatedState<?> newState) {
         state = newState;
         if (logger.isTraceEnabled()) {
             logger.trace(String.format("new replicated state time: %s",

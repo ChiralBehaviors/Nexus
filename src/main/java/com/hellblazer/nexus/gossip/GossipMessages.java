@@ -14,6 +14,7 @@
  */
 package com.hellblazer.nexus.gossip;
 
+import java.io.Serializable;
 import java.util.List;
 
 /**
@@ -22,7 +23,7 @@ import java.util.List;
  * @author <a href="mailto:hal.hildebrand@gmail.com">Hal Hildebrand</a>
  * 
  */
-public interface GossipMessages<T> {
+public interface GossipMessages {
     byte GOSSIP                     = 0;
     byte REPLY                      = 1;
     byte UPDATE                     = 2;
@@ -59,7 +60,7 @@ public interface GossipMessages<T> {
      * @param digests
      *            - the list of heartbeat digests the receiver knows about
      */
-    void gossip(List<Digest<T>> digests);
+    void gossip(List<Digest> digests);
 
     /**
      * The second message in the gossip protocol. Send a list of digests the
@@ -73,7 +74,8 @@ public interface GossipMessages<T> {
      *            - the updates for the node which are believed to be out of
      *            date
      */
-    void reply(List<Digest<T>> digests, List<ReplicatedState<T>> states);
+    void reply(List<Digest> digests,
+               List<ReplicatedState<? extends Serializable>> states);
 
     /**
      * The third message of the gossip protocol. Send a list of updated
@@ -83,6 +85,6 @@ public interface GossipMessages<T> {
      * @param deltaState
      *            - the list of heartbeat states requested.
      */
-    void update(List<ReplicatedState<T>> deltaState);
+    void update(List<ReplicatedState<? extends Serializable>> deltaState);
 
 }

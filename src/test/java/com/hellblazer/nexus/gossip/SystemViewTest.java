@@ -12,7 +12,7 @@
  * See the License for the specific language governing permissions and 
  * limitations under the License.
  */
-package com.hellblazer.jackal.gossip;
+package com.hellblazer.nexus.gossip;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;

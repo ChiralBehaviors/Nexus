@@ -20,11 +20,11 @@ import static com.hellblazer.nexus.gossip.GossipMessages.REPLY;
 import static com.hellblazer.nexus.gossip.GossipMessages.UPDATE;
 import static java.lang.Math.min;
 import static java.lang.String.format;
-import static java.util.Arrays.asList;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.io.Serializable;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
@@ -58,8 +58,8 @@ import com.hellblazer.nexus.util.HexDump;
  * @author <a href="mailto:hal.hildebrand@gmail.com">Hal Hildebrand</a>
  * 
  */
-public class UdpCommunications<T> implements GossipCommunications<T> {
-    private class GossipHandler implements GossipMessages<T> {
+public class UdpCommunications implements GossipCommunications {
+    private class GossipHandler implements GossipMessages {
         private final InetSocketAddress target;
 
         GossipHandler(InetSocketAddress target) {
@@ -73,22 +73,21 @@ public class UdpCommunications<T> implements GossipCommunications<T> {
         }
 
         @Override
-        public void gossip(List<Digest<T>> digests) {
+        public void gossip(List<Digest> digests) {
             sendDigests(digests, GOSSIP);
         }
 
         @Override
-        public void reply(List<Digest<T>> digests,
-                          List<ReplicatedState<T>> states) {
+        public void reply(List<Digest> digests, List<ReplicatedState<?>> states) {
             sendDigests(digests, REPLY);
             update(states);
         }
 
         @Override
-        public void update(List<ReplicatedState<T>> deltaState) {
+        public void update(List<ReplicatedState<?>> deltaState) {
             ByteBuffer buffer = bufferPool.allocate(MAX_SEG_SIZE);
             buffer.order(ByteOrder.BIG_ENDIAN);
-            for (ReplicatedState<T> state : deltaState) {
+            for (ReplicatedState<?> state : deltaState) {
                 buffer.position(4);
                 buffer.put(UPDATE);
                 state.writeTo(buffer);
@@ -98,7 +97,7 @@ public class UdpCommunications<T> implements GossipCommunications<T> {
             bufferPool.free(buffer);
         }
 
-        private void sendDigests(List<Digest<T>> digests, byte messageType) {
+        private void sendDigests(List<Digest> digests, byte messageType) {
             ByteBuffer buffer = bufferPool.allocate(MAX_SEG_SIZE);
             buffer.order(ByteOrder.BIG_ENDIAN);
             for (int i = 0; i < digests.size();) {
@@ -143,7 +142,7 @@ public class UdpCommunications<T> implements GossipCommunications<T> {
     }
 
     private final ExecutorService dispatcher;
-    private Gossip<T>             gossip;
+    private Gossip<?>             gossip;
     private final AtomicBoolean   running    = new AtomicBoolean();
     private final DatagramSocket  socket;
     private final ByteBufferPool  bufferPool = new ByteBufferPool("UDP Comms",
@@ -180,7 +179,7 @@ public class UdpCommunications<T> implements GossipCommunications<T> {
     }
 
     @Override
-    public void connect(InetSocketAddress address, Endpoint<T> endpoint,
+    public void connect(InetSocketAddress address, Endpoint endpoint,
                         Runnable connectAction) throws IOException {
         endpoint.setCommunications(new GossipHandler(address));
         connectAction.run();
@@ -193,7 +192,7 @@ public class UdpCommunications<T> implements GossipCommunications<T> {
     }
 
     @Override
-    public void send(ReplicatedState<T> state, InetSocketAddress left) {
+    public void send(ReplicatedState<?> state, InetSocketAddress left) {
         if (!gossip.isIgnoring(left)) {
             ByteBuffer buffer = bufferPool.allocate(MAX_SEG_SIZE);
             buffer.order(ByteOrder.BIG_ENDIAN);
@@ -207,7 +206,7 @@ public class UdpCommunications<T> implements GossipCommunications<T> {
     }
 
     @Override
-    public void setGossip(Gossip<T> gossip) {
+    public void setGossip(Gossip<?> gossip) {
         this.gossip = gossip;
     }
 
@@ -241,11 +240,11 @@ public class UdpCommunications<T> implements GossipCommunications<T> {
         if (log.isTraceEnabled()) {
             log.trace("Handling gossip, digest count: " + count);
         }
-        final List<Digest<T>> digests = new ArrayList<Digest<T>>(count);
+        final List<Digest> digests = new ArrayList<Digest>(count);
         for (int i = 0; i < count; i++) {
-            Digest<T> digest;
+            Digest digest;
             try {
-                digest = new Digest<T>(msg);
+                digest = new Digest(msg);
             } catch (Throwable e) {
                 if (log.isWarnEnabled()) {
                     log.warn("Cannot deserialize digest. Ignoring the digest.",
@@ -261,17 +260,16 @@ public class UdpCommunications<T> implements GossipCommunications<T> {
         gossip.gossip(digests, new GossipHandler(target));
     }
 
-    @SuppressWarnings("unchecked")
     private void handleReply(final InetSocketAddress target, ByteBuffer msg) {
         int digestCount = msg.getInt();
         if (log.isTraceEnabled()) {
             log.trace("Handling reply, digest count: " + digestCount);
         }
-        final List<Digest<T>> digests = new ArrayList<Digest<T>>(digestCount);
+        final List<Digest> digests = new ArrayList<Digest>(digestCount);
         for (int i = 0; i < digestCount; i++) {
-            Digest<T> digest;
+            Digest digest;
             try {
-                digest = new Digest<T>(msg);
+                digest = new Digest(msg);
             } catch (Throwable e) {
                 if (log.isWarnEnabled()) {
                     log.warn("Cannot deserialize digest. Ignoring the digest.",
@@ -281,14 +279,14 @@ public class UdpCommunications<T> implements GossipCommunications<T> {
             }
             digests.add(digest);
         }
-        gossip.reply(digests, Collections.EMPTY_LIST, new GossipHandler(target));
+        gossip.reply(digests, Collections.<ReplicatedState<?>> emptyList(),
+                     new GossipHandler(target));
     }
 
-    @SuppressWarnings("unchecked")
     private void handleUpdate(ByteBuffer msg) {
-        final ReplicatedState<T> state;
+        final ReplicatedState<?> state;
         try {
-            state = new ReplicatedState<T>(msg);
+            state = new ReplicatedState<Serializable>(msg);
         } catch (Throwable e) {
             if (log.isWarnEnabled()) {
                 log.warn("Cannot deserialize heartbeat state. Ignoring the state.",
@@ -299,7 +297,9 @@ public class UdpCommunications<T> implements GossipCommunications<T> {
         if (log.isTraceEnabled()) {
             log.trace(format("Heartbeat state from %s is : %s", this, state));
         }
-        gossip.update(asList(state));
+        List<ReplicatedState<?>> updates = new ArrayList<ReplicatedState<?>>();
+        updates.add(state);
+        gossip.update(updates);
     }
 
     private static String prettyPrint(SocketAddress sender,
