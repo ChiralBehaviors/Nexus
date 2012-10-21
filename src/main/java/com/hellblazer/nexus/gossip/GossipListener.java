@@ -26,11 +26,10 @@
 
 package com.hellblazer.nexus.gossip;
 
-
 /**
  * @author hhildebrand
  * 
  */
 public interface GossipListener {
-    void receive(ReplicatedState state);
+    void receive(byte[] state);
 }

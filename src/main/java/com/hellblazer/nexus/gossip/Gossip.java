@@ -634,7 +634,7 @@ public class Gossip {
         dispatcher.execute(new Runnable() {
             @Override
             public void run() {
-                listener.receive(state);
+                listener.receive(state.getState());
             }
         });
         ring.send(state);

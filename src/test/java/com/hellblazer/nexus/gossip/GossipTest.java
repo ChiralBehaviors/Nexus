@@ -53,13 +53,17 @@ public class GossipTest extends TestCase {
         InetSocketAddress address4 = new InetSocketAddress("127.0.0.1", 4);
 
         ReplicatedState state1 = new ReplicatedState(address1,
-                                                     new UUID(666, 1), null);
+                                                     new UUID(666, 1),
+                                                     new byte[0]);
         ReplicatedState state2 = new ReplicatedState(address2,
-                                                     new UUID(666, 2), null);
+                                                     new UUID(666, 2),
+                                                     new byte[0]);
         ReplicatedState state3 = new ReplicatedState(address3,
-                                                     new UUID(666, 3), null);
+                                                     new UUID(666, 3),
+                                                     new byte[0]);
         ReplicatedState state4 = new ReplicatedState(address4,
-                                                     new UUID(666, 4), null);
+                                                     new UUID(666, 4),
+                                                     new byte[0]);
 
         Gossip gossip = new Gossip(view, random, receiver, communications, 4,
                                    TimeUnit.DAYS, fdFactory, new UUID(0, 0));
@@ -101,19 +105,23 @@ public class GossipTest extends TestCase {
         InetSocketAddress address4 = new InetSocketAddress("127.0.0.1", 4);
 
         ReplicatedState state1 = new ReplicatedState(address1,
-                                                     new UUID(666, 1), null);
+                                                     new UUID(666, 1),
+                                                     new byte[] { 1 });
         state1.setTime(1);
 
         ReplicatedState state2 = new ReplicatedState(address2,
-                                                     new UUID(666, 2), null);
+                                                     new UUID(666, 2),
+                                                     new byte[] { 2 });
         state2.setTime(1);
 
         ReplicatedState state3 = new ReplicatedState(address3,
-                                                     new UUID(666, 3), null);
+                                                     new UUID(666, 3),
+                                                     new byte[] { 3 });
         state3.setTime(3);
 
         ReplicatedState state4 = new ReplicatedState(address4,
-                                                     new UUID(666, 4), null);
+                                                     new UUID(666, 4),
+                                                     new byte[] { 4 });
         state4.setTime(1);
 
         when(ep1.getTime()).thenReturn(0L);
@@ -131,7 +139,7 @@ public class GossipTest extends TestCase {
 
             @Override
             protected void notifyUpdate(ReplicatedState state) {
-                receiver.receive(state);
+                receiver.receive(state.getState());
             }
         };
 
@@ -167,8 +175,8 @@ public class GossipTest extends TestCase {
 
         verify(communications).setGossip(gossip);
 
-        verify(receiver).receive(state1);
-        verify(receiver).receive(state3);
+        verify(receiver).receive(state1.getState());
+        verify(receiver).receive(state3.getState());
         verifyNoMoreInteractions(communications);
     }
 
@@ -228,19 +236,23 @@ public class GossipTest extends TestCase {
         Digest digest3a = new Digest(address3, 3);
 
         ReplicatedState state1 = new ReplicatedState(address1,
-                                                     new UUID(666, 1), null);
+                                                     new UUID(666, 1),
+                                                     new byte[0]);
         state1.setTime(1);
 
         ReplicatedState state2 = new ReplicatedState(address2,
-                                                     new UUID(666, 2), null);
+                                                     new UUID(666, 2),
+                                                     new byte[0]);
         state2.setTime(2);
 
         ReplicatedState state3 = new ReplicatedState(address3,
-                                                     new UUID(666, 3), null);
+                                                     new UUID(666, 3),
+                                                     new byte[0]);
         state3.setTime(3);
 
         ReplicatedState state4 = new ReplicatedState(address4,
-                                                     new UUID(666, 4), null);
+                                                     new UUID(666, 4),
+                                                     new byte[0]);
         state4.setTime(4);
 
         Gossip gossip = new Gossip(view, random, listener, communications, 4,
