@@ -30,7 +30,7 @@ import org.slf4j.LoggerFactory;
  * 
  */
 
-public class Endpoint {
+public class Endpoint implements Comparable<Endpoint> {
     protected static Logger logger = LoggerFactory.getLogger(Endpoint.class);
 
     public static InetSocketAddress readInetAddress(ByteBuffer msg)
@@ -75,6 +75,22 @@ public class Endpoint {
         fd = failureDetector;
     }
 
+    /* (non-Javadoc)
+     * @see java.lang.Comparable#compareTo(java.lang.Object)
+     */
+    @Override
+    public int compareTo(Endpoint o) {
+        return state.getId().compareTo(o.getState().getId());
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (!(o instanceof Endpoint)) {
+            return false;
+        }
+        return state.getId().equals(((Endpoint) o).state.getId());
+    }
+
     public GossipMessages getHandler() {
         return handler;
     }
@@ -85,6 +101,11 @@ public class Endpoint {
 
     public long getTime() {
         return state.getTime();
+    }
+
+    @Override
+    public int hashCode() {
+        return state.getId().hashCode();
     }
 
     public boolean isAlive() {

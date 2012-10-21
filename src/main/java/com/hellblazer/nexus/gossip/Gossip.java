@@ -31,11 +31,9 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
-import java.util.SortedSet;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -89,7 +87,6 @@ public class Gossip {
     private final Ring                                       ring;
     private final Set<UUID>                                  theShunned = new HashSet<UUID>();
     private final UUID                                       id;
-    private final SortedSet<UUID>                            members    = new ConcurrentSkipListSet<UUID>();
 
     /**
      * 
@@ -210,7 +207,7 @@ public class Gossip {
             log.debug(String.format("Member: %s sending replicated state: %s",
                                     getId(), state));
         }
-        ring.update(members, endpoints.values());
+        ring.update(endpoints.values());
         ring.send(state);
     }
 
@@ -677,5 +674,4 @@ public class Gossip {
         }
         apply(remoteStates);
     }
-
 }

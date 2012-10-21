@@ -17,6 +17,7 @@ package com.hellblazer.nexus.gossip;
 import java.net.InetSocketAddress;
 import java.util.Collection;
 import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -24,13 +25,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class Ring {
-    private final GossipCommunications               comms;
-    private final AtomicReference<InetSocketAddress> neighbor = new AtomicReference<InetSocketAddress>();
-    private final UUID                               id;
-    private static final Logger                      log      = LoggerFactory.getLogger(Ring.class.getCanonicalName());
+    private final GossipCommunications                 comms;
+    private final AtomicReference<InetSocketAddress[]> neighbors = new AtomicReference<InetSocketAddress[]>(
+                                                                                                            new InetSocketAddress[2]);
+    private final Endpoint                             endpoint;
+    private static final Logger                        log       = LoggerFactory.getLogger(Ring.class.getCanonicalName());
 
-    public Ring(UUID identity, GossipCommunications comms) {
-        id = identity;
+    public Ring(UUID id, GossipCommunications comms) {
+        endpoint = new Endpoint(new ReplicatedState(null, id, null), null);
         this.comms = comms;
     }
 
@@ -40,14 +42,16 @@ public class Ring {
      * @param state
      */
     public void send(ReplicatedState state) {
-        InetSocketAddress l = neighbor.get();
-        if (l == null) {
-            if (log.isTraceEnabled()) {
-                log.trace("Ring has not been formed, not forwarding state");
+        InetSocketAddress[] targets = neighbors.get();
+        for (int i = 0; i < targets.length; i++) {
+            if (targets[i] != null) {
+                comms.send(state, targets[i]);
+            } else {
+                if (log.isTraceEnabled()) {
+                    log.trace(String.format("Ring has not been formed, not forwarding state"));
+                }
             }
-            return;
         }
-        comms.send(state, l);
     }
 
     /**
@@ -57,42 +61,29 @@ public class Ring {
      * @param members
      * @param endpoints
      */
-    public void update(SortedSet<UUID> members, Collection<Endpoint> endpoints) {
-        UUID n = leftNeighborOf(members, id);
-        if (n == null) {
+    public void update(Collection<Endpoint> endpoints) {
+        SortedSet<Endpoint> members = new TreeSet<Endpoint>();
+        members.addAll(endpoints);
+        members.remove(endpoint);
+        if (members.size() < 3) {
             if (log.isTraceEnabled()) {
-                log.trace(String.format("id {%s} does not have a left neighbor in: %s",
-                                        id, members));
-            }
-            return;
-        }
-        InetSocketAddress l = null;
-        for (Endpoint endpoint : endpoints) {
-            UUID identity = endpoint.getState().getId();
-            if (identity != null) {
-                UUID eid = identity;
-                if (eid == n) {
-                    l = endpoint.getState().getAddress();
-                    break;
-                }
+                log.trace(String.format("Ring has not been formed"));
             }
         }
-        if (l == null) {
-            if (log.isTraceEnabled()) {
-                log.trace("Ring has not been formed");
-            }
-            neighbor.set(null);
+        SortedSet<Endpoint> head = members.headSet(endpoint);
+        SortedSet<Endpoint> tail = members.tailSet(endpoint);
+        InetSocketAddress[] hood = new InetSocketAddress[2];
+        if (!head.isEmpty()) {
+            hood[0] = head.last().getState().getAddress();
         } else {
-            neighbor.set(l);
+            hood[0] = members.last().getState().getAddress();
         }
+        if (tail.size() > 0) {
+            hood[1] = tail.first().getState().getAddress();
+        } else {
+            hood[1] = members.first().getState().getAddress();
+        }
+        neighbors.set(hood);
     }
 
-    /**
-     * @param id
-     * @return
-     */
-    private UUID leftNeighborOf(SortedSet<UUID> members, UUID id) {
-        SortedSet<UUID> head = members.headSet(id);
-        return head.isEmpty() ? null : head.last();
-    }
 }
