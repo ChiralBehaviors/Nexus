@@ -14,7 +14,11 @@
  */
 package com.hellblazer.nexus.gossip;
 
+import static com.hellblazer.nexus.gossip.Endpoint.readInetAddress;
+import static com.hellblazer.nexus.gossip.Endpoint.writeInetAddress;
+
 import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.UUID;
 
@@ -43,10 +47,15 @@ public class ReplicatedState {
     }
 
     /**
-     * @param msg
+     * @param buffer
+     * @throws UnknownHostException
      */
-    public ReplicatedState(ByteBuffer msg) {
-        this(null, null, null);
+    public ReplicatedState(ByteBuffer buffer) throws UnknownHostException {
+        time = buffer.getLong();
+        id = new UUID(buffer.getLong(), buffer.getLong());
+        address = readInetAddress(buffer);
+        state = new byte[buffer.remaining()];
+        buffer.get(state);
     }
 
     /**
@@ -89,8 +98,11 @@ public class ReplicatedState {
      * @param buffer
      */
     public void writeTo(ByteBuffer buffer) {
-        // TODO Auto-generated method stub
-
+        buffer.putLong(time);
+        buffer.putLong(id.getMostSignificantBits());
+        buffer.putLong(id.getLeastSignificantBits());
+        writeInetAddress(address, buffer);
+        buffer.put(state);
     }
 
     /* (non-Javadoc)

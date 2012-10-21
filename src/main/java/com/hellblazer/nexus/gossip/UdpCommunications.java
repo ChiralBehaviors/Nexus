@@ -85,6 +85,7 @@ public class UdpCommunications implements GossipCommunications {
                 buffer.position(4);
                 buffer.put(UPDATE);
                 state.writeTo(buffer);
+                buffer.flip();
                 send(buffer, target);
                 buffer.clear();
             }
