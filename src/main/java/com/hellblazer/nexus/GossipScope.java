@@ -17,6 +17,7 @@
 package com.hellblazer.nexus;
 
 import java.io.IOException;
+import java.lang.Thread.UncaughtExceptionHandler;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
@@ -29,6 +30,8 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,6 +57,34 @@ import com.hellblazer.slp.local.LocalScope;
  * 
  */
 public class GossipScope implements ServiceScope {
+    private class GossipDispatcher implements GossipListener {
+
+        /* (non-Javadoc)
+         * @see com.hellblazer.gossip.GossipListener#deregister(java.util.UUID)
+         */
+        @Override
+        public void deregister(UUID id) {
+            GossipScope.this.deregister(id);
+        }
+
+        /* (non-Javadoc)
+         * @see com.hellblazer.gossip.GossipListener#register(java.util.UUID, byte[])
+         */
+        @Override
+        public void register(UUID id, byte[] state) {
+            GossipScope.this.register(id, state);
+        }
+
+        /* (non-Javadoc)
+         * @see com.hellblazer.gossip.GossipListener#update(java.util.UUID, byte[])
+         */
+        @Override
+        public void update(UUID id, byte[] state) {
+            GossipScope.this.update(id, state);
+        }
+
+    }
+
     private static class ListenerRegistration implements
             Comparable<ListenerRegistration> {
         private final ServiceListener listener;
@@ -261,16 +292,38 @@ public class GossipScope implements ServiceScope {
     }
 
     private final Executor                        executor;
-
     private final Gossip                          gossip;
-
     private final Set<ListenerRegistration>       listeners = new ConcurrentSkipListSet<ListenerRegistration>();
-
     private final Map<UUID, ServiceReferenceImpl> services  = new ConcurrentHashMap<UUID, ServiceReferenceImpl>();
+
+    public GossipScope(Gossip gossip) {
+        this(Executors.newFixedThreadPool(2, new ThreadFactory() {
+            int i = 0;
+
+            @Override
+            public Thread newThread(Runnable arg0) {
+                Thread daemon = new Thread(
+                                           arg0,
+                                           String.format("GossipScope dispatcher[%s]",
+                                                         i++));
+                daemon.setDaemon(true);
+                daemon.setUncaughtExceptionHandler(new UncaughtExceptionHandler() {
+
+                    @Override
+                    public void uncaughtException(Thread t, Throwable e) {
+                        log.warn(String.format("Uncaught exception on [%s]", t),
+                                 e);
+                    }
+                });
+                return daemon;
+            }
+        }), gossip);
+    }
 
     public GossipScope(Executor execService, Gossip gossip) {
         executor = execService;
         this.gossip = gossip;
+        this.gossip.setListener(new GossipDispatcher());
     }
 
     /* (non-Javadoc)

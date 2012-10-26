@@ -1,4 +1,5 @@
 package com.hellblazer.nexus;
+
 /** (C) Copyright 2010 Hal Hildebrand, All Rights Reserved
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,7 +14,6 @@ package com.hellblazer.nexus;
  * See the License for the specific language governing permissions and 
  * limitations under the License.
  */
-
 
 import java.util.Map;
 import java.util.UUID;
@@ -32,7 +32,6 @@ import com.hellblazer.slp.ServiceURL;
  * 
  */
 class ServiceReferenceImpl extends ServiceReference {
-    private static final long serialVersionUID = 1L;
 
     public ServiceReferenceImpl(ServiceURL url, Map<String, String> properties,
                                 UUID registration) {
