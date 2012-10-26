@@ -16,7 +16,11 @@
 
 package com.hellblazer.nexus;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -30,6 +34,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.hellblazer.gossip.Gossip;
+import com.hellblazer.gossip.GossipListener;
 import com.hellblazer.slp.Filter;
 import com.hellblazer.slp.InvalidSyntaxException;
 import com.hellblazer.slp.ServiceEvent;
@@ -37,6 +42,7 @@ import com.hellblazer.slp.ServiceEvent.EventType;
 import com.hellblazer.slp.ServiceListener;
 import com.hellblazer.slp.ServiceReference;
 import com.hellblazer.slp.ServiceScope;
+import com.hellblazer.slp.ServiceType;
 import com.hellblazer.slp.ServiceURL;
 import com.hellblazer.slp.local.LocalScope;
 
@@ -115,12 +121,152 @@ public class GossipScope implements ServiceScope {
         }
     }
 
-    private final static Logger                   log       = LoggerFactory.getLogger(LocalScope.class);
+    private final static Logger log                     = LoggerFactory.getLogger(LocalScope.class);
+
+    private static final int    MAXIMUM_TXT_STRING_SIZE = 255;
+
+    /**
+     * @param url
+     * @param properties
+     * @param registration
+     */
+    public static Map<String, String> denormalize(Map<String, String> properties) {
+        Map<String, String> denorm = new HashMap<String, String>(properties);
+        denorm.remove(SERVICE_TYPE);
+        denorm.remove(SERVICE_REGISTRAION);
+        denorm.remove(SERVICE_URL_PATH);
+        return denorm;
+    }
+
+    /**
+     * @param id
+     * @param state
+     * @return
+     */
+    public static ServiceReferenceImpl deserialize(UUID id, byte[] state) {
+        byte weight = state[0];
+        byte priority = state[1];
+        int len = (int) ((state[2] << 8) | (state[3] & 0xff));
+        String url = "service:" + new String(state, 4, len);
+        Map<String, String> properties = propertiesFrom(state, len + 4);
+        ServiceURL serviceUrl = new ServiceURL(url, weight, priority);
+        normalize(serviceUrl, properties, id);
+        return new ServiceReferenceImpl(serviceUrl, properties, id);
+    }
+
+    /**
+     * Answer the list of strings from the offset in the state
+     * 
+     * @param state
+     * @param offset
+     * @return
+     */
+    public static List<String> getStrings(byte[] state, int offset) {
+        List<String> strings = new ArrayList<String>();
+        for (int i = offset; i < state.length;) {
+            int len = state[i] & 0xFF;
+            strings.add(new String(state, i + 1, len));
+            i += len + 1;
+        }
+        return strings;
+    }
+
+    /**
+     * @param url
+     * @param properties
+     * @param registration
+     */
+    public static void normalize(ServiceURL url,
+                                 Map<String, String> properties,
+                                 UUID registration) {
+        properties.put(SERVICE_TYPE, url.getServiceType().toString());
+        properties.put(SERVICE_REGISTRAION, registration.toString());
+        properties.put(SERVICE_URL_PATH, url.getUrlPath());
+    }
+
+    /**
+     * reconstitute a properties map from the serialized state
+     * 
+     * @param state
+     * @param offset
+     * @return
+     */
+    public static Map<String, String> propertiesFrom(byte[] state, int offset) {
+        Map<String, String> properties = new HashMap<String, String>();
+        for (String entry : getStrings(state, offset)) {
+            if (entry.length() != 0) {
+                int i = entry.indexOf('=');
+                if (i <= 0) {
+                    log.warn(String.format("Found invalid property entry %s ",
+                                           entry));
+                }
+                properties.put(entry.substring(0, i), entry.substring(i + 1));
+            }
+        }
+        return properties;
+    }
+
+    public static void serialize(Map<String, String> properties,
+                                 ByteBuffer buffer, int maxSize) {
+        assert properties != null : "properties must not be null";
+
+        int totalSize = 0;
+        List<String> strings = new ArrayList<String>();
+        for (Map.Entry<String, String> entry : properties.entrySet()) {
+            String encodedEntry = String.format("%s=%s", entry.getKey(),
+                                                entry.getValue());
+            if (encodedEntry.length() > MAXIMUM_TXT_STRING_SIZE) {
+                throw new IllegalArgumentException(
+                                                   String.format("Property entry %s exceeded maximum size %s, total size %s",
+                                                                 encodedEntry,
+                                                                 MAXIMUM_TXT_STRING_SIZE,
+                                                                 encodedEntry.length()));
+            } else {
+                totalSize += encodedEntry.length();
+                strings.add(encodedEntry);
+            }
+        }
+        if (totalSize > maxSize) {
+            throw new IllegalArgumentException(
+                                               String.format("serialized property size exceeded maximum size %s, total size %s : %s",
+                                                             maxSize,
+                                                             totalSize,
+                                                             properties));
+        }
+        for (String entry : strings) {
+            buffer.put((byte) entry.length());
+            buffer.put(entry.getBytes());
+        }
+    }
+
+    /**
+     * @param url
+     * @param properties
+     * @return
+     * @throws IOException
+     */
+    public static byte[] serialize(ServiceURL url,
+                                   Map<String, String> properties) {
+        properties = denormalize(properties);
+        String serviceUrl = url.toString().substring(ServiceType.SERVICE_PREFIX.length());
+        ByteBuffer buffer = ByteBuffer.wrap(new byte[GossipListener.MAX_STATE_SIZE]);
+        buffer.order(ByteOrder.BIG_ENDIAN);
+        buffer.put((byte) url.getWeight());
+        buffer.put((byte) url.getPriority());
+        buffer.putShort((short) serviceUrl.length());
+        buffer.put(serviceUrl.getBytes());
+        serialize(properties, buffer,
+                  GossipListener.MAX_STATE_SIZE - buffer.position());
+        return Arrays.copyOf(buffer.array(), buffer.position());
+    }
 
     private final Executor                        executor;
-    private final Set<ListenerRegistration>       listeners = new ConcurrentSkipListSet<ListenerRegistration>();
-    private final Map<UUID, ServiceReferenceImpl> services  = new ConcurrentHashMap<UUID, ServiceReferenceImpl>();
+
     private final Gossip                          gossip;
+
+    private final Set<ListenerRegistration>       listeners = new ConcurrentSkipListSet<ListenerRegistration>();
+
+    private final Map<UUID, ServiceReferenceImpl> services  = new ConcurrentHashMap<UUID, ServiceReferenceImpl>();
 
     public GossipScope(Executor execService, Gossip gossip) {
         executor = execService;
@@ -219,8 +365,7 @@ public class GossipScope implements ServiceScope {
             properties = new HashMap<String, String>();
         }
         properties = new HashMap<String, String>(properties);
-        properties.put(SERVICE_TYPE, url.getServiceType().toString());
-        properties.put(SERVICE_REGISTRAION, registration.toString());
+        normalize(url, properties, registration);
         ServiceReferenceImpl ref = new ServiceReferenceImpl(url, properties,
                                                             registration);
         services.put(registration, ref);
@@ -269,7 +414,8 @@ public class GossipScope implements ServiceScope {
         properties = new HashMap<String, String>(properties);
         properties.put(SERVICE_TYPE, ref.currentProperties().get(SERVICE_TYPE));
         ref.setProperties(properties);
-        gossip.update(serviceRegistration, serialize(ref));
+        gossip.update(serviceRegistration,
+                      serialize(ref.getUrl(), ref.getProperties()));
         serviceChanged(ref, EventType.MODIFIED);
     }
 
@@ -288,35 +434,6 @@ public class GossipScope implements ServiceScope {
                                         serviceRegistration));
             }
         }
-    }
-
-    /**
-     * @param id
-     * @param state
-     * @return
-     */
-    private ServiceReferenceImpl deserialize(UUID id, byte[] state) {
-        // TODO Auto-generated method stub
-        return null;
-    }
-
-    /**
-     * @param ref
-     * @return
-     */
-    private byte[] serialize(ServiceReferenceImpl ref) {
-        // TODO Auto-generated method stub
-        return null;
-    }
-
-    /**
-     * @param url
-     * @param properties
-     * @return
-     */
-    private byte[] serialize(ServiceURL url, Map<String, String> properties) {
-        // TODO Auto-generated method stub
-        return null;
     }
 
     /**
