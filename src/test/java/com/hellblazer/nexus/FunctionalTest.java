@@ -16,6 +16,7 @@
 
 package com.hellblazer.nexus;
 
+import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertTrue;
 
 import java.lang.Thread.UncaughtExceptionHandler;
@@ -27,6 +28,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
@@ -44,7 +46,6 @@ import com.hellblazer.slp.ServiceEvent.EventType;
 import com.hellblazer.slp.ServiceListener;
 import com.hellblazer.slp.ServiceScope;
 import com.hellblazer.slp.ServiceURL;
-import static junit.framework.Assert.*;
 
 /**
  * @author hhildebrand
@@ -52,7 +53,7 @@ import static junit.framework.Assert.*;
  */
 public class FunctionalTest {
 
-    private class Listener implements ServiceListener {
+    private static class Listener implements ServiceListener {
         final Map<EventType, List<ServiceURL>> events = new HashMap<ServiceEvent.EventType, List<ServiceURL>>();
 
         /**
@@ -76,6 +77,7 @@ public class FunctionalTest {
 
         @Override
         public void serviceChanged(ServiceEvent event) {
+            events.get(event.getType()).add(event.getReference().getUrl());
             switch (event.getType()) {
                 case REGISTERED: {
                     registered.countDown();
@@ -116,23 +118,41 @@ public class FunctionalTest {
         GossipScope scope = scopes.get(0);
         ServiceURL url = new ServiceURL(
                                         "service:jmx:http://foo.bar.baz.bozo.com/some/resource/ish/thing");
-        scope.register(url, new HashMap<String, String>());
+        UUID registration = scope.register(url, new HashMap<String, String>());
 
+        System.out.println("Waiting for registrations");
         assertTrue("did not receive all registrations",
-                   registered.await(10, TimeUnit.SECONDS));
+                   registered.await(120, TimeUnit.SECONDS));
+        for (Listener listener : listeners) {
+            assertEquals("Received more than one registration", 1,
+                         listener.events.get(EventType.REGISTERED).size());
+        }
+        System.out.println("All registrations received");
+
+        Map<String, String> properties = new HashMap<String, String>();
+        properties.put("update.group", "1");
+        properties.put("threads", "2");
+        scopes.get(0).setProperties(registration, properties);
+
+        System.out.println("Waiting for modfications");
         assertTrue("did not receive all modifications",
                    modified.await(10, TimeUnit.SECONDS));
+        for (Listener listener : listeners) {
+            assertEquals("Received more than one modification", 1,
+                         listener.events.get(EventType.MODIFIED).size());
+        }
+        System.out.println("All modifications received");
+
+        scopes.get(0).unregister(registration);
+        System.out.println("Waiting for unregistrations");
         assertTrue("did not receive all unregistrations",
                    unregistered.await(10, TimeUnit.SECONDS));
-
         for (Listener listener : listeners) {
-            assertEquals("Invalid registered count", 1,
-                         listener.events.get(EventType.REGISTERED));
-            assertEquals("Invalid modified count", 1,
-                         listener.events.get(EventType.MODIFIED));
-            assertEquals("Invalid unregistered count", 1,
-                         listener.events.get(EventType.UNREGISTERED));
+            assertEquals("Received more than one unregistration", 1,
+                         listener.events.get(EventType.UNREGISTERED).size());
         }
+        System.out.println("All unregistrations received");
+
     }
 
     protected List<Gossip> createGossips(int membership, int maxSeeds)
