@@ -177,7 +177,7 @@ public class GossipScope implements ServiceScope {
     public static ServiceReferenceImpl deserialize(UUID id, byte[] state) {
         byte weight = state[0];
         byte priority = state[1];
-        int len = (int) ((state[2] << 8) | (state[3] & 0xff));
+        int len = state[2] << 8 | state[3] & 0xff;
         String url = "service:" + new String(state, 4, len);
         Map<String, String> properties = propertiesFrom(state, len + 4);
         ServiceURL serviceUrl = new ServiceURL(url, weight, priority);
@@ -297,6 +297,12 @@ public class GossipScope implements ServiceScope {
     private final Set<ListenerRegistration>       listeners = new ConcurrentSkipListSet<ListenerRegistration>();
     private final Map<UUID, ServiceReferenceImpl> services  = new ConcurrentHashMap<UUID, ServiceReferenceImpl>();
 
+    public GossipScope(Executor execService, Gossip gossip) {
+        executor = execService;
+        this.gossip = gossip;
+        this.gossip.setListener(new GossipDispatcher());
+    }
+
     public GossipScope(Gossip gossip) {
         this(Executors.newFixedThreadPool(2, new ThreadFactory() {
             int i = 0;
@@ -319,12 +325,6 @@ public class GossipScope implements ServiceScope {
                 return daemon;
             }
         }), gossip);
-    }
-
-    public GossipScope(Executor execService, Gossip gossip) {
-        executor = execService;
-        this.gossip = gossip;
-        this.gossip.setListener(new GossipDispatcher());
     }
 
     /* (non-Javadoc)
@@ -473,6 +473,14 @@ public class GossipScope implements ServiceScope {
                       serialize(ref.getUrl(), ref.getProperties(),
                                 gossip.getMaxStateSize()));
         serviceChanged(ref, EventType.MODIFIED);
+    }
+
+    public void start() {
+        gossip.start();
+    }
+
+    public void terminate() {
+        gossip.terminate();
     }
 
     /* (non-Javadoc)
