@@ -273,21 +273,22 @@ public class GossipScope implements ServiceScope {
     /**
      * @param url
      * @param properties
+     * @param maxStateSize
      * @return
      * @throws IOException
      */
     public static byte[] serialize(ServiceURL url,
-                                   Map<String, String> properties) {
+                                   Map<String, String> properties,
+                                   int maxStateSize) {
         properties = denormalize(properties);
         String serviceUrl = url.toString().substring(ServiceType.SERVICE_PREFIX.length());
-        ByteBuffer buffer = ByteBuffer.wrap(new byte[GossipListener.MAX_STATE_SIZE]);
+        ByteBuffer buffer = ByteBuffer.wrap(new byte[maxStateSize]);
         buffer.order(ByteOrder.BIG_ENDIAN);
         buffer.put((byte) url.getWeight());
         buffer.put((byte) url.getPriority());
         buffer.putShort((short) serviceUrl.length());
         buffer.put(serviceUrl.getBytes());
-        serialize(properties, buffer,
-                  GossipListener.MAX_STATE_SIZE - buffer.position());
+        serialize(properties, buffer, maxStateSize - buffer.position());
         return Arrays.copyOf(buffer.array(), buffer.position());
     }
 
@@ -413,7 +414,8 @@ public class GossipScope implements ServiceScope {
         if (url == null) {
             throw new IllegalArgumentException("Service URL cannot be null");
         }
-        UUID registration = gossip.register(serialize(url, properties));
+        UUID registration = gossip.register(serialize(url, properties,
+                                                      gossip.getMaxStateSize()));
         if (properties == null) {
             properties = new HashMap<String, String>();
         }
@@ -468,7 +470,8 @@ public class GossipScope implements ServiceScope {
         properties.put(SERVICE_TYPE, ref.currentProperties().get(SERVICE_TYPE));
         ref.setProperties(properties);
         gossip.update(serviceRegistration,
-                      serialize(ref.getUrl(), ref.getProperties()));
+                      serialize(ref.getUrl(), ref.getProperties(),
+                                gossip.getMaxStateSize()));
         serviceChanged(ref, EventType.MODIFIED);
     }
 

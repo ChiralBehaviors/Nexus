@@ -99,7 +99,7 @@ public class GossipScopeTest {
 
             HashMap<String, String> properties = new HashMap<String, String>();
             GossipScope.normalize(jmxServiceURL, properties, registration);
-            serialized = GossipScope.serialize(jmxServiceURL, properties);
+            serialized = GossipScope.serialize(jmxServiceURL, properties, 1433);
         } finally {
             if (server != null) {
                 server.stop();
