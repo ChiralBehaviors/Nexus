@@ -97,7 +97,7 @@ public class FunctionalTest {
 
     @Test
     public void functionalTest() throws Exception {
-        int members = 12;
+        int members = 98;
         int maxSeeds = 1;
         final CountDownLatch registered = new CountDownLatch(members);
         final CountDownLatch modified = new CountDownLatch(members);
@@ -112,7 +112,7 @@ public class FunctionalTest {
                                                    ServiceScope.SERVICE_TYPE));
             scopes.add(scope);
             listeners.add(listener);
-            gossip.start();
+            scope.start();
         }
 
         GossipScope scope = scopes.get(0);
