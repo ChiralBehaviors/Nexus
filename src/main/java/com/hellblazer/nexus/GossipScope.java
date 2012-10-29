@@ -359,15 +359,6 @@ public class GossipScope implements ServiceScope {
     }
 
     /* (non-Javadoc)
-     * @see com.hellblazer.slp.ServiceScope#addServiceListener(com.hellblazer.slp.ServiceListener, java.lang.String, java.lang.String)
-     */
-    @Override
-    public void addServiceListener(ServiceListener listener, String query,
-                                   String zone) throws InvalidSyntaxException {
-        addServiceListener(listener, query);
-    }
-
-    /* (non-Javadoc)
      * @see com.hellblazer.slp.ServiceScope#getServiceReference(java.lang.String)
      */
     @Override
