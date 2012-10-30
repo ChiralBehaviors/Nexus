@@ -7,6 +7,34 @@
 	<name>Nexus</name>
 	<description>Gossip based service discovery and failure detection</description>
 
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0</url>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <name>Hal Hildebrand</name>
+            <email>hal.hildebrand@me.com</email>
+            <organization>Hellbound Productions</organization>
+        </developer>
+    </developers>
+
+    <scm>
+        <connection>git://github.com/Hellblazer/Nexus.git</connection>
+        <url>https://github.com/Hellblazer/Nexus</url>
+    </scm>
+
+    <repositories>
+        <repository>
+            <id>hellblazer-snapshots</id>
+            <url>https://repository-hal900000.forge.cloudbees.com/snapshot/</url>
+        </repository>
+    </repositories>
+    
+
 	<dependencies>
 		<dependency>
 			<groupId>junit</groupId>
@@ -52,6 +80,20 @@
 					<target>1.6</target>
 				</configuration>
 			</plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <version>2.2.1</version>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>jar-no-fork</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
 		</plugins>
 	</build>
 </project>
