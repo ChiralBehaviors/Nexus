@@ -18,6 +18,7 @@ package com.hellblazer.nexus;
 
 import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
+import java.net.MalformedURLException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
@@ -180,7 +181,12 @@ public class GossipScope implements ServiceScope {
         int len = state[2] << 8 | state[3] & 0xff;
         String url = "service:" + new String(state, 4, len);
         Map<String, String> properties = propertiesFrom(state, len + 4);
-        ServiceURL serviceUrl = new ServiceURL(url, weight, priority);
+        ServiceURL serviceUrl;
+        try {
+            serviceUrl = new ServiceURL(url, weight, priority);
+        } catch (MalformedURLException e) {
+            throw new IllegalStateException(String.format("Invalid service url: %s", url), e);
+        }
         normalize(serviceUrl, properties, id);
         return new ServiceReferenceImpl(serviceUrl, properties, id);
     }
