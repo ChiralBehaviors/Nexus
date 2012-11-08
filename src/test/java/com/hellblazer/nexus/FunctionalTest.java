@@ -129,7 +129,7 @@ public class FunctionalTest {
 
         System.out.println("Waiting for modfications");
         assertTrue("did not receive all modifications",
-                   modified.await(10, TimeUnit.SECONDS));
+                   modified.await(30, TimeUnit.SECONDS));
         for (Listener listener : listeners) {
             assertEquals("Received more than one modification", 1,
                          listener.events.get(EventType.MODIFIED).size());
@@ -139,7 +139,7 @@ public class FunctionalTest {
         scopes.get(0).unregister(registration);
         System.out.println("Waiting for unregistrations");
         assertTrue("did not receive all unregistrations",
-                   unregistered.await(10, TimeUnit.SECONDS));
+                   unregistered.await(30, TimeUnit.SECONDS));
         for (Listener listener : listeners) {
             assertEquals("Received more than one unregistration", 1,
                          listener.events.get(EventType.UNREGISTERED).size());
