@@ -90,7 +90,7 @@ public class FunctionalTest {
 
     @Test
     public void functionalTest() throws Exception {
-        int members = 98;
+        int members = 6;
         int maxSeeds = 1;
         final CountDownLatch registered = new CountDownLatch(members);
         final CountDownLatch modified = new CountDownLatch(members);
