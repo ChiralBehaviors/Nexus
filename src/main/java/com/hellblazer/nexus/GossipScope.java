@@ -165,7 +165,7 @@ public class GossipScope implements ServiceScope {
     public static Map<String, String> denormalize(Map<String, String> properties) {
         Map<String, String> denorm = new HashMap<String, String>(properties);
         denorm.remove(SERVICE_TYPE);
-        denorm.remove(SERVICE_REGISTRAION);
+        denorm.remove(SERVICE_REGISTRATION);
         denorm.remove(SERVICE_URL_PATH);
         return denorm;
     }
@@ -217,7 +217,7 @@ public class GossipScope implements ServiceScope {
                                  Map<String, String> properties,
                                  UUID registration) {
         properties.put(SERVICE_TYPE, url.getServiceType().toString());
-        properties.put(SERVICE_REGISTRAION, registration.toString());
+        properties.put(SERVICE_REGISTRATION, registration.toString());
         properties.put(SERVICE_URL_PATH, url.getUrlPath());
     }
 
