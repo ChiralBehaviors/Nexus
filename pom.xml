@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.hellblazer</groupId>
 	<artifactId>nexus</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>1.0.0</version>
 	<name>Nexus</name>
 	<description>Gossip based service discovery and failure detection</description>
 
@@ -28,6 +28,10 @@
     </scm>
 
     <repositories>
+        <repository>
+            <id>hellblazer-release</id>
+            <url>https://repository-hal900000.forge.cloudbees.com/release/</url>
+        </repository>
         <repository>
             <id>hellblazer-snapshots</id>
             <url>https://repository-hal900000.forge.cloudbees.com/snapshot/</url>
@@ -55,12 +59,12 @@
 		<dependency>
 			<groupId>com.hellblazer</groupId>
 			<artifactId>chinese-whispers</artifactId>
-			<version>0.0.1-SNAPSHOT</version>
+			<version>1.0.0</version>
 		</dependency>
 		<dependency>
 			<groupId>com.hellblazer</groupId>
 			<artifactId>service-discovery</artifactId>
-			<version>0.0.1-SNAPSHOT</version>
+			<version>1.0.0</version>
 		</dependency>
 		<dependency>
 			<groupId>ch.qos.logback</groupId>
