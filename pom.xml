@@ -3,41 +3,41 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.hellblazer</groupId>
 	<artifactId>nexus</artifactId>
-	<version>1.0.0</version>
+	<version>1.0.1-SNAPSHOT</version>
 	<name>Nexus</name>
 	<description>Gossip based service discovery and failure detection</description>
 
-    <licenses>
-        <license>
-            <name>Apache License, Version 2.0</name>
-            <url>http://www.apache.org/licenses/LICENSE-2.0</url>
-        </license>
-    </licenses>
+	<licenses>
+		<license>
+			<name>Apache License, Version 2.0</name>
+			<url>http://www.apache.org/licenses/LICENSE-2.0</url>
+		</license>
+	</licenses>
 
-    <developers>
-        <developer>
-            <name>Hal Hildebrand</name>
-            <email>hal.hildebrand@me.com</email>
-            <organization>Hellbound Productions</organization>
-        </developer>
-    </developers>
+	<developers>
+		<developer>
+			<name>Hal Hildebrand</name>
+			<email>hal.hildebrand@me.com</email>
+			<organization>Hellbound Productions</organization>
+		</developer>
+	</developers>
 
-    <scm>
-        <connection>git://github.com/Hellblazer/Nexus.git</connection>
-        <url>https://github.com/Hellblazer/Nexus</url>
-    </scm>
+	<scm>
+		<connection>git://github.com/Hellblazer/Nexus.git</connection>
+		<url>https://github.com/Hellblazer/Nexus</url>
+	</scm>
 
-    <repositories>
-        <repository>
-            <id>hellblazer-release</id>
-            <url>https://repository-hal900000.forge.cloudbees.com/release/</url>
-        </repository>
-        <repository>
-            <id>hellblazer-snapshots</id>
-            <url>https://repository-hal900000.forge.cloudbees.com/snapshot/</url>
-        </repository>
-    </repositories>
-    
+	<repositories>
+		<repository>
+			<id>hellblazer-release</id>
+			<url>https://repository-hal900000.forge.cloudbees.com/release/</url>
+		</repository>
+		<repository>
+			<id>hellblazer-snapshots</id>
+			<url>https://repository-hal900000.forge.cloudbees.com/snapshot/</url>
+		</repository>
+	</repositories>
+
 
 	<dependencies>
 		<dependency>
@@ -55,11 +55,12 @@
 			<groupId>org.mockito</groupId>
 			<artifactId>mockito-all</artifactId>
 			<version>1.9.0</version>
+			<scope>test</scope>
 		</dependency>
 		<dependency>
 			<groupId>com.hellblazer</groupId>
 			<artifactId>chinese-whispers</artifactId>
-			<version>1.0.0</version>
+			<version>1.0.1-SNAPSHOT</version>
 		</dependency>
 		<dependency>
 			<groupId>com.hellblazer</groupId>
@@ -84,20 +85,20 @@
 					<target>1.6</target>
 				</configuration>
 			</plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-source-plugin</artifactId>
-                <version>2.2.1</version>
-                <executions>
-                    <execution>
-                        <id>attach-sources</id>
-                        <phase>verify</phase>
-                        <goals>
-                            <goal>jar-no-fork</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-source-plugin</artifactId>
+				<version>2.2.1</version>
+				<executions>
+					<execution>
+						<id>attach-sources</id>
+						<phase>verify</phase>
+						<goals>
+							<goal>jar-no-fork</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
 		</plugins>
 	</build>
 </project>

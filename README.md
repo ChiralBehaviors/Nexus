@@ -25,5 +25,5 @@ add as dependency:
     <dependency>
         <groupId>com.hellblazer</groupId>
         <artifactId>nexus</artifactId>
-        <version>0.0.1-SNAPSHOT</version>
+        <version>1.0.1-SNAPSHOT</version>
     </dependency>
