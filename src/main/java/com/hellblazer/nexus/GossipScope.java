@@ -48,7 +48,6 @@ import com.hellblazer.slp.ServiceReference;
 import com.hellblazer.slp.ServiceScope;
 import com.hellblazer.slp.ServiceType;
 import com.hellblazer.slp.ServiceURL;
-import com.hellblazer.slp.local.LocalScope;
 
 /**
  * A service discovery scope based on the Chinese Whispers gossip based state
@@ -163,7 +162,8 @@ public class GossipScope implements ServiceScope {
 		}
 	}
 
-	private final static Logger log = LoggerFactory.getLogger(LocalScope.class);
+	private final static Logger log = LoggerFactory
+			.getLogger(GossipScope.class);
 
 	private static final int MAXIMUM_TXT_STRING_SIZE = 255;
 
@@ -565,6 +565,9 @@ public class GossipScope implements ServiceScope {
 		executor.execute(new Runnable() {
 			@Override
 			public void run() {
+				log.info(String.format(
+						"Notifying service change of reference %s type %s",
+						reference, type));
 				for (ListenerRegistration reg : listeners) {
 					if (reg.query.match(reference)) {
 						final ServiceListener listener = reg.listener;
