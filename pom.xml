@@ -26,6 +26,11 @@
 		<connection>git://github.com/Hellblazer/Nexus.git</connection>
 		<url>https://github.com/Hellblazer/Nexus</url>
 	</scm>
+    
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.resources.sourceEncoding>UTF-8</project.resources.sourceEncoding>
+    </properties>
 
 	<repositories>
 		<repository>
@@ -65,7 +70,7 @@
 		<dependency>
 			<groupId>com.hellblazer</groupId>
 			<artifactId>service-discovery</artifactId>
-			<version>1.0.0</version>
+			<version>1.0.1-SNAPSHOT</version>
 		</dependency>
 		<dependency>
 			<groupId>ch.qos.logback</groupId>
