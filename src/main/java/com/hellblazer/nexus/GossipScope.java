@@ -118,7 +118,7 @@ public class GossipScope implements ServiceScope {
 				return query.compareTo(reg.query);
 			} else {
 				return new Integer(listener.hashCode()).compareTo(new Integer(
-						listener.hashCode()));
+						reg.hashCode()));
 			}
 		}
 
@@ -355,26 +355,32 @@ public class GossipScope implements ServiceScope {
 	@Override
 	public void addServiceListener(final ServiceListener listener, String query)
 			throws InvalidSyntaxException {
-		if (log.isTraceEnabled()) {
-			log.trace("adding listener: " + listener + " on query: " + query);
+		Filter filter = new Filter(query);
+		if (listeners.add(new ListenerRegistration(listener, filter))) {
+			if (log.isInfoEnabled()) {
+				log.info(String.format("Adding listener on %s", query));
+			}
+		} else {
+			log.warn(String.format("Did not add listener on %s", query));
+			return;
 		}
-		List<ServiceReference> references;
-		listeners.add(new ListenerRegistration(listener, new Filter(query)));
-		references = getServiceReferences(null, query);
-		for (ServiceReference reference : references) {
+		for (ServiceReference reference : services.values()) {
 			final ServiceReference ref = reference;
-			executor.execute(new Runnable() {
-				@Override
-				public void run() {
-					try {
-						listener.serviceChanged(new ServiceEvent(
-								EventType.REGISTERED, ref));
-					} catch (Throwable e) {
-						log.error("Error when notifying listener on reference "
-								+ EventType.REGISTERED, e);
+			if (filter.match(ref)) {
+				executor.execute(new Runnable() {
+					@Override
+					public void run() {
+						try {
+							listener.serviceChanged(new ServiceEvent(
+									EventType.REGISTERED, ref));
+						} catch (Throwable e) {
+							log.error(
+									"Error when notifying listener on reference "
+											+ EventType.REGISTERED, e);
+						}
 					}
-				}
-			});
+				});
+			}
 		}
 
 	}
@@ -566,27 +572,20 @@ public class GossipScope implements ServiceScope {
 
 	protected void serviceChanged(final ServiceReference reference,
 			final EventType type) {
-		log.info(String.format(
-				"Processing service change of reference %s type %s", reference,
-				type));
+		if (log.isDebugEnabled()) {
+			log.debug(String.format(
+					"Processing service change of reference %s type %s",
+					reference, type));
+		}
 		for (ListenerRegistration reg : listeners) {
 			if (reg.query.match(reference)) {
-				log.info(String.format(
-						"Notifying service change of reference %s type %s",
-						reference, type));
 				final ServiceListener listener = reg.listener;
 				executor.execute(new Runnable() {
 					@Override
 					public void run() {
 						try {
-							log.info(String
-									.format("Executing service change of reference %s type %s",
-											reference, type));
 							listener.serviceChanged(new ServiceEvent(type,
 									reference));
-							log.info(String
-									.format("Finished executing service change of reference %s type %s",
-											reference, type));
 						} catch (Throwable e) {
 							log.error(
 									String.format(
@@ -595,11 +594,6 @@ public class GossipScope implements ServiceScope {
 						}
 					}
 				});
-			} else {
-				if (log.isInfoEnabled()) {
-					log.info(String.format("%s did not match %s", reg.query,
-							reference));
-				}
 			}
 		}
 	}
