@@ -319,26 +319,30 @@ public class GossipScope implements ServiceScope {
 	}
 
 	public GossipScope(Gossip gossip) {
-		this(Executors.newFixedThreadPool(2, new ThreadFactory() {
-			int i = 0;
+		this(gossip, 2);
+	}
 
-			@Override
-			public Thread newThread(Runnable arg0) {
-				Thread daemon = new Thread(arg0, String.format(
-						"GossipScope dispatcher[%s]", i++));
-				daemon.setDaemon(true);
-				daemon.setUncaughtExceptionHandler(new UncaughtExceptionHandler() {
+	public GossipScope(Gossip gossip, int notificationThreads) {
+		this(Executors.newFixedThreadPool(notificationThreads,
+				new ThreadFactory() {
+					int i = 0;
 
 					@Override
-					public void uncaughtException(Thread t, Throwable e) {
-						log.warn(
-								String.format("Uncaught exception on [%s]", t),
-								e);
+					public Thread newThread(Runnable arg0) {
+						Thread daemon = new Thread(arg0, String.format(
+								"GossipScope dispatcher[%s]", i++));
+						daemon.setDaemon(true);
+						daemon.setUncaughtExceptionHandler(new UncaughtExceptionHandler() {
+
+							@Override
+							public void uncaughtException(Thread t, Throwable e) {
+								log.warn(String.format(
+										"Uncaught exception on [%s]", t), e);
+							}
+						});
+						return daemon;
 					}
-				});
-				return daemon;
-			}
-		}), gossip);
+				}), gossip);
 	}
 
 	/*
@@ -562,34 +566,42 @@ public class GossipScope implements ServiceScope {
 
 	protected void serviceChanged(final ServiceReference reference,
 			final EventType type) {
-		executor.execute(new Runnable() {
-			@Override
-			public void run() {
+		log.info(String.format(
+				"Processing service change of reference %s type %s", reference,
+				type));
+		for (ListenerRegistration reg : listeners) {
+			if (reg.query.match(reference)) {
 				log.info(String.format(
 						"Notifying service change of reference %s type %s",
 						reference, type));
-				for (ListenerRegistration reg : listeners) {
-					if (reg.query.match(reference)) {
-						final ServiceListener listener = reg.listener;
-						executor.execute(new Runnable() {
-							@Override
-							public void run() {
-								try {
-									listener.serviceChanged(new ServiceEvent(
-											type, reference));
-								} catch (Throwable e) {
-									log.error(
-											String.format(
-													"Error when notifying listener %s on reference %s type %s",
-													listener, reference, type),
-											e);
-								}
-							}
-						});
+				final ServiceListener listener = reg.listener;
+				executor.execute(new Runnable() {
+					@Override
+					public void run() {
+						try {
+							log.info(String
+									.format("Executing service change of reference %s type %s",
+											reference, type));
+							listener.serviceChanged(new ServiceEvent(type,
+									reference));
+							log.info(String
+									.format("Finished executing service change of reference %s type %s",
+											reference, type));
+						} catch (Throwable e) {
+							log.error(
+									String.format(
+											"Error when notifying listener %s on reference %s type %s",
+											listener, reference, type), e);
+						}
 					}
+				});
+			} else {
+				if (log.isInfoEnabled()) {
+					log.info(String.format("%s did not match %s", reg.query,
+							reference));
 				}
 			}
-		});
+		}
 	}
 
 	/**
