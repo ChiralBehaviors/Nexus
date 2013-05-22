@@ -526,7 +526,8 @@ public class GossipScope implements ServiceScope {
 		return this;
 	}
 
-	public GossipScope terminate() {
+	@Override
+	public ServiceScope stop() {
 		gossip.terminate();
 		return this;
 	}
