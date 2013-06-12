@@ -48,100 +48,100 @@ import com.hellblazer.slp.ServiceURL;
  * 
  */
 public class GossipScopeTest {
-	@Test
-	public void testProperties() throws Exception {
-		Map<String, String> properties = new HashMap<String, String>();
-		char[] value = new char[252];
-		Arrays.fill(value, 'v');
-		String valueString = new String(value);
-		for (int i = 0; i < 3; i++) {
-			properties.put(String.valueOf(i), valueString);
-		}
-		ByteBuffer buffer = ByteBuffer.allocate(800);
-		GossipScope.serialize(properties, buffer, 800);
-		byte[] state = Arrays.copyOf(buffer.array(), buffer.position());
-		Map<String, String> lookedUpProperties = GossipScope.propertiesFrom(
-				state, 0);
-		assertEquals(properties.size(), lookedUpProperties.size());
-		for (Map.Entry<String, String> entry : properties.entrySet()) {
-			assertEquals(entry.getValue(),
-					lookedUpProperties.get(entry.getKey()));
-		}
+    @Test
+    public void testProperties() throws Exception {
+	Map<String, String> properties = new HashMap<String, String>();
+	char[] value = new char[252];
+	Arrays.fill(value, 'v');
+	String valueString = new String(value);
+	for (int i = 0; i < 3; i++) {
+	    properties.put(String.valueOf(i), valueString);
 	}
-
-	@Test
-	public void testSerialization() throws Exception {
-		InetSocketAddress jmxEndpoint = new InetSocketAddress("localhost", 0);
-
-		UUID registration = UUID.randomUUID();
-		// Ensure cryptographically strong random number generater used
-		// to choose the object number - see java.rmi.server.ObjID
-		System.setProperty("java.rmi.server.randomIDs", "true");
-
-		MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
-		JMXServiceURL url = new JMXServiceURL("rmi", jmxEndpoint.getHostName(),
-				jmxEndpoint.getPort());
-		JMXConnectorServer server = null;
-		byte[] serialized;
-		ServiceURL jmxServiceURL;
-		try {
-			server = JMXConnectorServerFactory.newJMXConnectorServer(url,
-					new HashMap<String, Object>(), mbs);
-			server.start();
-
-			url = server.getAddress();
-			StringBuilder builder = new StringBuilder();
-			builder.append(ServiceType.SERVICE_PREFIX);
-			builder.append("awesome_sauce");
-			builder.append(':');
-			builder.append("jmx:");
-			builder.append(url.getProtocol());
-			builder.append("://");
-			builder.append(url.getHost());
-			builder.append(':');
-			builder.append(url.getPort());
-			builder.append(url.getURLPath());
-			jmxServiceURL = new ServiceURL(builder.toString());
-
-			HashMap<String, String> properties = new HashMap<String, String>();
-			GossipScope.normalize(jmxServiceURL, properties, registration);
-			serialized = GossipScope.serialize(jmxServiceURL, properties, 1433);
-		} finally {
-			if (server != null) {
-				server.stop();
-			}
-		}
-		ServiceReferenceImpl deserialized = GossipScope.deserialize(
-				registration, serialized);
-		assertEquals(jmxServiceURL, deserialized.getUrl());
+	ByteBuffer buffer = ByteBuffer.allocate(800);
+	GossipScope.serialize(properties, buffer, 800);
+	byte[] state = Arrays.copyOf(buffer.array(), buffer.position());
+	Map<String, String> lookedUpProperties = GossipScope.propertiesFrom(
+		state, 0);
+	assertEquals(properties.size(), lookedUpProperties.size());
+	for (Map.Entry<String, String> entry : properties.entrySet()) {
+	    assertEquals(entry.getValue(),
+		    lookedUpProperties.get(entry.getKey()));
 	}
+    }
 
-	@Test
-	public void testMultipleRegistrations() throws Exception {
-		final AtomicInteger count = new AtomicInteger();
-		ServiceListener listener = new ServiceListener() {
-			@Override
-			public void serviceChanged(ServiceEvent event) {
-				count.incrementAndGet();
-			}
-		};
+    @Test
+    public void testSerialization() throws Exception {
+	InetSocketAddress jmxEndpoint = new InetSocketAddress("localhost", 0);
 
-		GossipScope scope = new GossipScope(new Executor() {
-			@Override
-			public void execute(Runnable command) {
-				command.run();
-			}
-		}, new GossipConfiguration().construct());
-		scope.addServiceListener(listener,
-				String.format("(%s=service:foo)", ServiceScope.SERVICE_TYPE));
-		scope.addServiceListener(listener,
-				String.format("(%s=service:bar)", ServiceScope.SERVICE_TYPE));
+	UUID registration = UUID.randomUUID();
+	// Ensure cryptographically strong random number generater used
+	// to choose the object number - see java.rmi.server.ObjID
+	System.setProperty("java.rmi.server.randomIDs", "true");
 
-		scope.register(new ServiceURL("service:foo://foo:5"),
-				Collections.<String, String> emptyMap());
-		scope.register(new ServiceURL("service:bar://bar:6"),
-				Collections.<String, String> emptyMap());
+	MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
+	JMXServiceURL url = new JMXServiceURL("rmi", jmxEndpoint.getHostName(),
+		jmxEndpoint.getPort());
+	JMXConnectorServer server = null;
+	byte[] serialized;
+	ServiceURL jmxServiceURL;
+	try {
+	    server = JMXConnectorServerFactory.newJMXConnectorServer(url,
+		    new HashMap<String, Object>(), mbs);
+	    server.start();
 
-		assertEquals(2, count.get());
+	    url = server.getAddress();
+	    StringBuilder builder = new StringBuilder();
+	    builder.append(ServiceType.SERVICE_PREFIX);
+	    builder.append("awesome_sauce");
+	    builder.append(':');
+	    builder.append("jmx:");
+	    builder.append(url.getProtocol());
+	    builder.append("://");
+	    builder.append(url.getHost());
+	    builder.append(':');
+	    builder.append(url.getPort());
+	    builder.append(url.getURLPath());
+	    jmxServiceURL = new ServiceURL(builder.toString());
+
+	    HashMap<String, String> properties = new HashMap<String, String>();
+	    GossipScope.normalize(jmxServiceURL, properties, registration);
+	    serialized = GossipScope.serialize(jmxServiceURL, properties, 1433);
+	} finally {
+	    if (server != null) {
+		server.stop();
+	    }
 	}
+	ServiceReferenceImpl deserialized = GossipScope.deserialize(
+		registration, serialized);
+	assertEquals(jmxServiceURL, deserialized.getUrl());
+    }
+
+    @Test
+    public void testMultipleRegistrations() throws Exception {
+	final AtomicInteger count = new AtomicInteger();
+	ServiceListener listener = new ServiceListener() {
+	    @Override
+	    public void serviceChanged(ServiceEvent event) {
+		count.incrementAndGet();
+	    }
+	};
+
+	GossipScope scope = new GossipScope(new Executor() {
+	    @Override
+	    public void execute(Runnable command) {
+		command.run();
+	    }
+	}, new GossipConfiguration().construct());
+	scope.addServiceListener(listener,
+		String.format("(%s=service:foo)", ServiceScope.SERVICE_TYPE));
+	scope.addServiceListener(listener,
+		String.format("(%s=service:bar)", ServiceScope.SERVICE_TYPE));
+
+	scope.register(new ServiceURL("service:foo://foo:5"),
+		Collections.<String, String> emptyMap());
+	scope.register(new ServiceURL("service:bar://bar:6"),
+		Collections.<String, String> emptyMap());
+
+	assertEquals(2, count.get());
+    }
 }

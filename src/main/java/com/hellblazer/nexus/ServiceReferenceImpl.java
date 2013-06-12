@@ -34,15 +34,15 @@ import com.hellblazer.slp.ServiceURL;
 class ServiceReferenceImpl extends ServiceReference {
 
     public ServiceReferenceImpl(ServiceURL url, Map<String, String> properties,
-                                UUID registration) {
-        super(url, properties, registration);
+	    UUID registration) {
+	super(url, properties, registration);
     }
 
     protected Map<String, String> currentProperties() {
-        return properties;
+	return properties;
     }
 
     protected void setProperties(Map<String, String> properties) {
-        this.properties = properties;
+	this.properties = properties;
     }
 }
