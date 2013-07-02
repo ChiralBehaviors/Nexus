@@ -59,113 +59,112 @@ import com.hellblazer.slp.ServiceURL;
 public class GossipScope implements ServiceScope {
     private class GossipDispatcher implements GossipListener {
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see com.hellblazer.gossip.GossipListener#deregister(java.util.UUID)
-	 */
-	@Override
-	public void deregister(UUID id) {
-	    GossipScope.this.deregister(id);
-	}
+        /*
+         * (non-Javadoc)
+         * 
+         * @see com.hellblazer.gossip.GossipListener#deregister(java.util.UUID)
+         */
+        @Override
+        public void deregister(UUID id) {
+            GossipScope.this.deregister(id);
+        }
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see com.hellblazer.gossip.GossipListener#register(java.util.UUID,
-	 * byte[])
-	 */
-	@Override
-	public void register(UUID id, byte[] state) {
-	    GossipScope.this.register(id, state);
-	}
+        /*
+         * (non-Javadoc)
+         * 
+         * @see com.hellblazer.gossip.GossipListener#register(java.util.UUID,
+         * byte[])
+         */
+        @Override
+        public void register(UUID id, byte[] state) {
+            GossipScope.this.register(id, state);
+        }
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see com.hellblazer.gossip.GossipListener#update(java.util.UUID,
-	 * byte[])
-	 */
-	@Override
-	public void update(UUID id, byte[] state) {
-	    GossipScope.this.update(id, state);
-	}
+        /*
+         * (non-Javadoc)
+         * 
+         * @see com.hellblazer.gossip.GossipListener#update(java.util.UUID,
+         * byte[])
+         */
+        @Override
+        public void update(UUID id, byte[] state) {
+            GossipScope.this.update(id, state);
+        }
 
     }
 
     private static class ListenerRegistration implements
-	    Comparable<ListenerRegistration> {
-	private final ServiceListener listener;
-	private final Filter query;
+            Comparable<ListenerRegistration> {
+        private final ServiceListener listener;
+        private final Filter          query;
 
-	/**
-	 * @param listener
-	 * @param fileter
-	 */
-	public ListenerRegistration(ServiceListener listener, Filter filter) {
-	    this.listener = listener;
-	    query = filter;
-	}
+        /**
+         * @param listener
+         * @param fileter
+         */
+        public ListenerRegistration(ServiceListener listener, Filter filter) {
+            this.listener = listener;
+            query = filter;
+        }
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see java.lang.Comparable#compareTo(java.lang.Object)
-	 */
-	@Override
-	public int compareTo(ListenerRegistration reg) {
-	    if (listener.equals(reg.listener)) {
-		return query.compareTo(reg.query);
-	    } else {
-		return new Integer(listener.hashCode()).compareTo(new Integer(
-			reg.hashCode()));
-	    }
-	}
+        /*
+         * (non-Javadoc)
+         * 
+         * @see java.lang.Comparable#compareTo(java.lang.Object)
+         */
+        @Override
+        public int compareTo(ListenerRegistration reg) {
+            if (listener.equals(reg.listener)) {
+                return query.compareTo(reg.query);
+            } else {
+                return new Integer(listener.hashCode()).compareTo(new Integer(
+                                                                              reg.hashCode()));
+            }
+        }
 
-	@Override
-	public boolean equals(Object obj) {
-	    if (this == obj) {
-		return true;
-	    }
-	    if (obj == null) {
-		return false;
-	    }
-	    if (getClass() != obj.getClass()) {
-		return false;
-	    }
-	    ListenerRegistration other = (ListenerRegistration) obj;
-	    if (listener == null) {
-		if (other.listener != null) {
-		    return false;
-		}
-	    } else if (!listener.equals(other.listener)) {
-		return false;
-	    }
-	    if (query == null) {
-		if (other.query != null) {
-		    return false;
-		}
-	    } else if (!query.equals(other.query)) {
-		return false;
-	    }
-	    return true;
-	}
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) {
+                return true;
+            }
+            if (obj == null) {
+                return false;
+            }
+            if (getClass() != obj.getClass()) {
+                return false;
+            }
+            ListenerRegistration other = (ListenerRegistration) obj;
+            if (listener == null) {
+                if (other.listener != null) {
+                    return false;
+                }
+            } else if (!listener.equals(other.listener)) {
+                return false;
+            }
+            if (query == null) {
+                if (other.query != null) {
+                    return false;
+                }
+            } else if (!query.equals(other.query)) {
+                return false;
+            }
+            return true;
+        }
 
-	@Override
-	public int hashCode() {
-	    final int prime = 31;
-	    int result = 1;
-	    result = prime * result
-		    + (listener == null ? 0 : listener.hashCode());
-	    result = prime * result + (query == null ? 0 : query.hashCode());
-	    return result;
-	}
+        @Override
+        public int hashCode() {
+            final int prime = 31;
+            int result = 1;
+            result = prime * result
+                     + (listener == null ? 0 : listener.hashCode());
+            result = prime * result + (query == null ? 0 : query.hashCode());
+            return result;
+        }
     }
 
-    private final static Logger log = LoggerFactory
-	    .getLogger(GossipScope.class);
+    private final static Logger log                     = LoggerFactory.getLogger(GossipScope.class);
 
-    private static final int MAXIMUM_TXT_STRING_SIZE = 255;
+    private static final int    MAXIMUM_TXT_STRING_SIZE = 255;
 
     /**
      * @param url
@@ -173,11 +172,11 @@ public class GossipScope implements ServiceScope {
      * @param registration
      */
     public static Map<String, String> denormalize(Map<String, String> properties) {
-	Map<String, String> denorm = new HashMap<String, String>(properties);
-	denorm.remove(SERVICE_TYPE);
-	denorm.remove(SERVICE_REGISTRATION);
-	denorm.remove(SERVICE_URL_PATH);
-	return denorm;
+        Map<String, String> denorm = new HashMap<String, String>(properties);
+        denorm.remove(SERVICE_TYPE);
+        denorm.remove(SERVICE_REGISTRATION);
+        denorm.remove(SERVICE_URL_PATH);
+        return denorm;
     }
 
     /**
@@ -186,20 +185,21 @@ public class GossipScope implements ServiceScope {
      * @return
      */
     public static ServiceReferenceImpl deserialize(UUID id, byte[] state) {
-	byte weight = state[0];
-	byte priority = state[1];
-	int len = state[2] << 8 | state[3] & 0xff;
-	String url = "service:" + new String(state, 4, len);
-	Map<String, String> properties = propertiesFrom(state, len + 4);
-	ServiceURL serviceUrl;
-	try {
-	    serviceUrl = new ServiceURL(url, weight, priority);
-	} catch (MalformedURLException e) {
-	    throw new IllegalStateException(String.format(
-		    "Invalid service url: %s", url), e);
-	}
-	normalize(serviceUrl, properties, id);
-	return new ServiceReferenceImpl(serviceUrl, properties, id);
+        byte weight = state[0];
+        byte priority = state[1];
+        int len = state[2] << 8 | state[3] & 0xff;
+        String url = "service:" + new String(state, 4, len);
+        Map<String, String> properties = propertiesFrom(state, len + 4);
+        ServiceURL serviceUrl;
+        try {
+            serviceUrl = new ServiceURL(url, weight, priority);
+        } catch (MalformedURLException e) {
+            throw new IllegalStateException(
+                                            String.format("Invalid service url: %s",
+                                                          url), e);
+        }
+        normalize(serviceUrl, properties, id);
+        return new ServiceReferenceImpl(serviceUrl, properties, id);
     }
 
     /**
@@ -210,13 +210,13 @@ public class GossipScope implements ServiceScope {
      * @return
      */
     public static List<String> getStrings(byte[] state, int offset) {
-	List<String> strings = new ArrayList<String>();
-	for (int i = offset; i < state.length;) {
-	    int len = state[i] & 0xFF;
-	    strings.add(new String(state, i + 1, len));
-	    i += len + 1;
-	}
-	return strings;
+        List<String> strings = new ArrayList<String>();
+        for (int i = offset; i < state.length;) {
+            int len = state[i] & 0xFF;
+            strings.add(new String(state, i + 1, len));
+            i += len + 1;
+        }
+        return strings;
     }
 
     /**
@@ -225,10 +225,11 @@ public class GossipScope implements ServiceScope {
      * @param registration
      */
     public static void normalize(ServiceURL url,
-	    Map<String, String> properties, UUID registration) {
-	properties.put(SERVICE_TYPE, url.getServiceType().toString());
-	properties.put(SERVICE_REGISTRATION, registration.toString());
-	properties.put(SERVICE_URL_PATH, url.getUrlPath());
+                                 Map<String, String> properties,
+                                 UUID registration) {
+        properties.put(SERVICE_TYPE, url.getServiceType().toString());
+        properties.put(SERVICE_REGISTRATION, registration.toString());
+        properties.put(SERVICE_URL_PATH, url.getUrlPath());
     }
 
     /**
@@ -239,50 +240,51 @@ public class GossipScope implements ServiceScope {
      * @return
      */
     public static Map<String, String> propertiesFrom(byte[] state, int offset) {
-	Map<String, String> properties = new HashMap<String, String>();
-	for (String entry : getStrings(state, offset)) {
-	    if (entry.length() != 0) {
-		int i = entry.indexOf('=');
-		if (i <= 0) {
-		    log.warn(String.format("Found invalid property entry %s ",
-			    entry));
-		}
-		properties.put(entry.substring(0, i), entry.substring(i + 1));
-	    }
-	}
-	return properties;
+        Map<String, String> properties = new HashMap<String, String>();
+        for (String entry : getStrings(state, offset)) {
+            if (entry.length() != 0) {
+                int i = entry.indexOf('=');
+                if (i <= 0) {
+                    log.warn(String.format("Found invalid property entry %s ",
+                                           entry));
+                }
+                properties.put(entry.substring(0, i), entry.substring(i + 1));
+            }
+        }
+        return properties;
     }
 
     public static void serialize(Map<String, String> properties,
-	    ByteBuffer buffer, int maxSize) {
-	assert properties != null : "properties must not be null";
+                                 ByteBuffer buffer, int maxSize) {
+        assert properties != null : "properties must not be null";
 
-	int totalSize = 0;
-	List<String> strings = new ArrayList<String>();
-	for (Map.Entry<String, String> entry : properties.entrySet()) {
-	    String encodedEntry = String.format("%s=%s", entry.getKey(),
-		    entry.getValue());
-	    if (encodedEntry.length() > MAXIMUM_TXT_STRING_SIZE) {
-		throw new IllegalArgumentException(
-			String.format(
-				"Property entry %s exceeded maximum size %s, total size %s",
-				encodedEntry, MAXIMUM_TXT_STRING_SIZE,
-				encodedEntry.length()));
-	    } else {
-		totalSize += encodedEntry.length();
-		strings.add(encodedEntry);
-	    }
-	}
-	if (totalSize > maxSize) {
-	    throw new IllegalArgumentException(
-		    String.format(
-			    "serialized property size exceeded maximum size %s, total size %s : %s",
-			    maxSize, totalSize, properties));
-	}
-	for (String entry : strings) {
-	    buffer.put((byte) entry.length());
-	    buffer.put(entry.getBytes());
-	}
+        int totalSize = 0;
+        List<String> strings = new ArrayList<String>();
+        for (Map.Entry<String, String> entry : properties.entrySet()) {
+            String encodedEntry = String.format("%s=%s", entry.getKey(),
+                                                entry.getValue());
+            if (encodedEntry.length() > MAXIMUM_TXT_STRING_SIZE) {
+                throw new IllegalArgumentException(
+                                                   String.format("Property entry %s exceeded maximum size %s, total size %s",
+                                                                 encodedEntry,
+                                                                 MAXIMUM_TXT_STRING_SIZE,
+                                                                 encodedEntry.length()));
+            } else {
+                totalSize += encodedEntry.length();
+                strings.add(encodedEntry);
+            }
+        }
+        if (totalSize > maxSize) {
+            throw new IllegalArgumentException(
+                                               String.format("serialized property size exceeded maximum size %s, total size %s : %s",
+                                                             maxSize,
+                                                             totalSize,
+                                                             properties));
+        }
+        for (String entry : strings) {
+            buffer.put((byte) entry.length());
+            buffer.put(entry.getBytes());
+        }
     }
 
     /**
@@ -293,56 +295,60 @@ public class GossipScope implements ServiceScope {
      * @throws IOException
      */
     public static byte[] serialize(ServiceURL url,
-	    Map<String, String> properties, int maxStateSize) {
-	properties = denormalize(properties);
-	String serviceUrl = url.toString().substring(
-		ServiceType.SERVICE_PREFIX.length());
-	ByteBuffer buffer = ByteBuffer.wrap(new byte[maxStateSize]);
-	buffer.order(ByteOrder.BIG_ENDIAN);
-	buffer.put((byte) url.getWeight());
-	buffer.put((byte) url.getPriority());
-	buffer.putShort((short) serviceUrl.length());
-	buffer.put(serviceUrl.getBytes());
-	serialize(properties, buffer, maxStateSize - buffer.position());
-	return Arrays.copyOf(buffer.array(), buffer.position());
+                                   Map<String, String> properties,
+                                   int maxStateSize) {
+        properties = denormalize(properties);
+        String serviceUrl = url.toString().substring(ServiceType.SERVICE_PREFIX.length());
+        ByteBuffer buffer = ByteBuffer.wrap(new byte[maxStateSize]);
+        buffer.order(ByteOrder.BIG_ENDIAN);
+        buffer.put((byte) url.getWeight());
+        buffer.put((byte) url.getPriority());
+        buffer.putShort((short) serviceUrl.length());
+        buffer.put(serviceUrl.getBytes());
+        serialize(properties, buffer, maxStateSize - buffer.position());
+        return Arrays.copyOf(buffer.array(), buffer.position());
     }
 
-    private final Executor executor;
-    private final Gossip gossip;
-    private final Set<ListenerRegistration> listeners = new ConcurrentSkipListSet<ListenerRegistration>();
-    private final Map<UUID, ServiceReferenceImpl> services = new ConcurrentHashMap<UUID, ServiceReferenceImpl>();
+    private final Executor                        executor;
+    private final Gossip                          gossip;
+    private final Set<ListenerRegistration>       listeners = new ConcurrentSkipListSet<ListenerRegistration>();
+    private final Map<UUID, ServiceReferenceImpl> services  = new ConcurrentHashMap<UUID, ServiceReferenceImpl>();
 
     public GossipScope(Executor execService, Gossip gossip) {
-	executor = execService;
-	this.gossip = gossip;
-	this.gossip.setListener(new GossipDispatcher());
+        executor = execService;
+        this.gossip = gossip;
+        this.gossip.setListener(new GossipDispatcher());
     }
 
     public GossipScope(Gossip gossip) {
-	this(gossip, 2);
+        this(gossip, 2);
     }
 
     public GossipScope(Gossip gossip, int notificationThreads) {
-	this(Executors.newFixedThreadPool(notificationThreads,
-		new ThreadFactory() {
-		    int i = 0;
+        this(Executors.newFixedThreadPool(notificationThreads,
+                                          new ThreadFactory() {
+                                              int i = 0;
 
-		    @Override
-		    public Thread newThread(Runnable arg0) {
-			Thread daemon = new Thread(arg0, String.format(
-				"GossipScope dispatcher[%s]", i++));
-			daemon.setDaemon(true);
-			daemon.setUncaughtExceptionHandler(new UncaughtExceptionHandler() {
+                                              @Override
+                                              public Thread newThread(Runnable arg0) {
+                                                  Thread daemon = new Thread(
+                                                                             arg0,
+                                                                             String.format("GossipScope dispatcher[%s]",
+                                                                                           i++));
+                                                  daemon.setDaemon(true);
+                                                  daemon.setUncaughtExceptionHandler(new UncaughtExceptionHandler() {
 
-			    @Override
-			    public void uncaughtException(Thread t, Throwable e) {
-				log.warn(String.format(
-					"Uncaught exception on [%s]", t), e);
-			    }
-			});
-			return daemon;
-		    }
-		}), gossip);
+                                                      @Override
+                                                      public void uncaughtException(Thread t,
+                                                                                    Throwable e) {
+                                                          log.warn(String.format("Uncaught exception on [%s]",
+                                                                                 t),
+                                                                   e);
+                                                      }
+                                                  });
+                                                  return daemon;
+                                              }
+                                          }), gossip);
     }
 
     /*
@@ -354,35 +360,43 @@ public class GossipScope implements ServiceScope {
      */
     @Override
     public void addServiceListener(final ServiceListener listener, String query)
-	    throws InvalidSyntaxException {
-	Filter filter = new Filter(query);
-	if (listeners.add(new ListenerRegistration(listener, filter))) {
-	    if (log.isInfoEnabled()) {
-		log.info(String.format("Adding listener on %s", query));
-	    }
-	} else {
-	    log.warn(String.format("Did not add listener on %s", query));
-	    return;
-	}
-	for (ServiceReference reference : services.values()) {
-	    final ServiceReference ref = reference;
-	    if (filter.match(ref)) {
-		executor.execute(new Runnable() {
-		    @Override
-		    public void run() {
-			try {
-			    listener.serviceChanged(new ServiceEvent(
-				    EventType.REGISTERED, ref));
-			} catch (Throwable e) {
-			    log.error(
-				    "Error when notifying listener on reference "
-					    + EventType.REGISTERED, e);
-			}
-		    }
-		});
-	    }
-	}
+                                                                                throws InvalidSyntaxException {
+        Filter filter = new Filter(query);
+        if (listeners.add(new ListenerRegistration(listener, filter))) {
+            if (log.isInfoEnabled()) {
+                log.info(String.format("Adding listener on %s", query));
+            }
+        } else {
+            log.warn(String.format("Did not add listener on %s", query));
+            return;
+        }
+        for (ServiceReference reference : services.values()) {
+            final ServiceReference ref = reference;
+            if (filter.match(ref)) {
+                executor.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            listener.serviceChanged(new ServiceEvent(
+                                                                     EventType.REGISTERED,
+                                                                     ref));
+                        } catch (Throwable e) {
+                            log.error("Error when notifying listener on reference "
+                                              + EventType.REGISTERED, e);
+                        }
+                    }
+                });
+            }
+        }
 
+    }
+
+    /* (non-Javadoc)
+     * @see com.hellblazer.slp.ServiceScope#getReference(java.util.UUID)
+     */
+    @Override
+    public ServiceReference getReference(UUID serviceRegistration) {
+        return services.get(serviceRegistration);
     }
 
     /*
@@ -393,17 +407,17 @@ public class GossipScope implements ServiceScope {
      */
     @Override
     public ServiceReference getServiceReference(String serviceType)
-	    throws InvalidSyntaxException {
-	if (serviceType == null) {
-	    serviceType = "*";
-	}
-	Filter filter = new Filter("(" + SERVICE_TYPE + "=" + serviceType + ")");
-	for (ServiceReference ref : services.values()) {
-	    if (filter.match(ref)) {
-		return ref;
-	    }
-	}
-	return null;
+                                                                   throws InvalidSyntaxException {
+        if (serviceType == null) {
+            serviceType = "*";
+        }
+        Filter filter = new Filter("(" + SERVICE_TYPE + "=" + serviceType + ")");
+        for (ServiceReference ref : services.values()) {
+            if (filter.match(ref)) {
+                return ref;
+            }
+        }
+        return null;
     }
 
     /*
@@ -415,25 +429,26 @@ public class GossipScope implements ServiceScope {
      */
     @Override
     public List<ServiceReference> getServiceReferences(String serviceType,
-	    String query) throws InvalidSyntaxException {
-	if (serviceType == null) {
-	    serviceType = "*";
-	}
-	Filter filter;
-	if (query == null) {
-	    filter = new Filter(String.format("(%s=%s)", SERVICE_TYPE,
-		    serviceType));
-	} else {
-	    filter = new Filter(String.format("(&(%s=%s) %s)", SERVICE_TYPE,
-		    serviceType, query));
-	}
-	ArrayList<ServiceReference> references = new ArrayList<ServiceReference>();
-	for (Map.Entry<UUID, ServiceReferenceImpl> entry : services.entrySet()) {
-	    if (filter.match(entry.getValue())) {
-		references.add(entry.getValue());
-	    }
-	}
-	return references;
+                                                       String query)
+                                                                    throws InvalidSyntaxException {
+        if (serviceType == null) {
+            serviceType = "*";
+        }
+        Filter filter;
+        if (query == null) {
+            filter = new Filter(String.format("(%s=%s)", SERVICE_TYPE,
+                                              serviceType));
+        } else {
+            filter = new Filter(String.format("(&(%s=%s) %s)", SERVICE_TYPE,
+                                              serviceType, query));
+        }
+        ArrayList<ServiceReference> references = new ArrayList<ServiceReference>();
+        for (Map.Entry<UUID, ServiceReferenceImpl> entry : services.entrySet()) {
+            if (filter.match(entry.getValue())) {
+                references.add(entry.getValue());
+            }
+        }
+        return references;
     }
 
     /*
@@ -445,21 +460,21 @@ public class GossipScope implements ServiceScope {
      */
     @Override
     public UUID register(ServiceURL url, Map<String, String> properties) {
-	if (url == null) {
-	    throw new IllegalArgumentException("Service URL cannot be null");
-	}
-	UUID registration = gossip.register(serialize(url, properties,
-		gossip.getMaxStateSize()));
-	if (properties == null) {
-	    properties = new HashMap<String, String>();
-	}
-	properties = new HashMap<String, String>(properties);
-	normalize(url, properties, registration);
-	ServiceReferenceImpl ref = new ServiceReferenceImpl(url, properties,
-		registration);
-	services.put(registration, ref);
-	serviceChanged(ref, EventType.REGISTERED);
-	return registration;
+        if (url == null) {
+            throw new IllegalArgumentException("Service URL cannot be null");
+        }
+        UUID registration = gossip.register(serialize(url, properties,
+                                                      gossip.getMaxStateSize()));
+        if (properties == null) {
+            properties = new HashMap<String, String>();
+        }
+        properties = new HashMap<String, String>(properties);
+        normalize(url, properties, registration);
+        ServiceReferenceImpl ref = new ServiceReferenceImpl(url, properties,
+                                                            registration);
+        services.put(registration, ref);
+        serviceChanged(ref, EventType.REGISTERED);
+        return registration;
 
     }
 
@@ -472,13 +487,13 @@ public class GossipScope implements ServiceScope {
      */
     @Override
     public void removeServiceListener(ServiceListener listener) {
-	List<ListenerRegistration> registrations = new ArrayList<ListenerRegistration>();
-	for (ListenerRegistration reg : listeners) {
-	    if (reg.listener == listener) {
-		registrations.add(reg);
-	    }
-	}
-	listeners.removeAll(registrations);
+        List<ListenerRegistration> registrations = new ArrayList<ListenerRegistration>();
+        for (ListenerRegistration reg : listeners) {
+            if (reg.listener == listener) {
+                registrations.add(reg);
+            }
+        }
+        listeners.removeAll(registrations);
     }
 
     /*
@@ -490,8 +505,8 @@ public class GossipScope implements ServiceScope {
      */
     @Override
     public void removeServiceListener(ServiceListener listener, String query)
-	    throws InvalidSyntaxException {
-	listeners.remove(new ListenerRegistration(listener, new Filter(query)));
+                                                                             throws InvalidSyntaxException {
+        listeners.remove(new ListenerRegistration(listener, new Filter(query)));
     }
 
     /*
@@ -502,34 +517,34 @@ public class GossipScope implements ServiceScope {
      */
     @Override
     public void setProperties(UUID serviceRegistration,
-	    Map<String, String> properties) {
-	ServiceReferenceImpl ref = services.get(serviceRegistration);
-	if (ref == null) {
-	    if (log.isTraceEnabled()) {
-		log.trace(String.format("No service registered for %s",
-			serviceRegistration));
-	    }
-	    return;
-	}
-	properties = new HashMap<String, String>(properties);
-	properties.put(SERVICE_TYPE, ref.currentProperties().get(SERVICE_TYPE));
-	ref.setProperties(properties);
-	gossip.update(
-		serviceRegistration,
-		serialize(ref.getUrl(), ref.getProperties(),
-			gossip.getMaxStateSize()));
-	serviceChanged(ref, EventType.MODIFIED);
+                              Map<String, String> properties) {
+        ServiceReferenceImpl ref = services.get(serviceRegistration);
+        if (ref == null) {
+            if (log.isTraceEnabled()) {
+                log.trace(String.format("No service registered for %s",
+                                        serviceRegistration));
+            }
+            return;
+        }
+        properties = new HashMap<String, String>(properties);
+        properties.put(SERVICE_TYPE, ref.currentProperties().get(SERVICE_TYPE));
+        ref.setProperties(properties);
+        gossip.update(serviceRegistration,
+                      serialize(ref.getUrl(), ref.getProperties(),
+                                gossip.getMaxStateSize()));
+        serviceChanged(ref, EventType.MODIFIED);
     }
 
+    @Override
     public GossipScope start() {
-	gossip.start();
-	return this;
+        gossip.start();
+        return this;
     }
 
     @Override
     public ServiceScope stop() {
-	gossip.terminate();
-	return this;
+        gossip.terminate();
+        return this;
     }
 
     /*
@@ -539,26 +554,26 @@ public class GossipScope implements ServiceScope {
      */
     @Override
     public void unregister(UUID serviceRegistration) {
-	ServiceReference ref = services.remove(serviceRegistration);
-	if (ref != null) {
-	    gossip.deregister(serviceRegistration);
-	    serviceChanged(ref, EventType.UNREGISTERED);
-	} else {
-	    if (log.isTraceEnabled()) {
-		log.trace(String.format("No service registered for %s",
-			serviceRegistration));
-	    }
-	}
+        ServiceReference ref = services.remove(serviceRegistration);
+        if (ref != null) {
+            gossip.deregister(serviceRegistration);
+            serviceChanged(ref, EventType.UNREGISTERED);
+        } else {
+            if (log.isTraceEnabled()) {
+                log.trace(String.format("No service registered for %s",
+                                        serviceRegistration));
+            }
+        }
     }
 
     /**
      * @param id
      */
     protected void deregister(UUID id) {
-	ServiceReference reference = services.remove(id);
-	if (reference != null) {
-	    serviceChanged(reference, EventType.UNREGISTERED);
-	}
+        ServiceReference reference = services.remove(id);
+        if (reference != null) {
+            serviceChanged(reference, EventType.UNREGISTERED);
+        }
     }
 
     /**
@@ -566,37 +581,35 @@ public class GossipScope implements ServiceScope {
      * @param state
      */
     protected void register(UUID id, byte[] state) {
-	ServiceReferenceImpl reference = deserialize(id, state);
-	services.put(id, reference);
-	serviceChanged(reference, EventType.REGISTERED);
+        ServiceReferenceImpl reference = deserialize(id, state);
+        services.put(id, reference);
+        serviceChanged(reference, EventType.REGISTERED);
     }
 
     protected void serviceChanged(final ServiceReference reference,
-	    final EventType type) {
-	if (log.isDebugEnabled()) {
-	    log.debug(String.format(
-		    "Processing service change of reference %s type %s",
-		    reference, type));
-	}
-	for (ListenerRegistration reg : listeners) {
-	    if (reg.query.match(reference)) {
-		final ServiceListener listener = reg.listener;
-		executor.execute(new Runnable() {
-		    @Override
-		    public void run() {
-			try {
-			    listener.serviceChanged(new ServiceEvent(type,
-				    reference));
-			} catch (Throwable e) {
-			    log.error(
-				    String.format(
-					    "Error when notifying listener %s on reference %s type %s",
-					    listener, reference, type), e);
-			}
-		    }
-		});
-	    }
-	}
+                                  final EventType type) {
+        if (log.isDebugEnabled()) {
+            log.debug(String.format("Processing service change of reference %s type %s",
+                                    reference, type));
+        }
+        for (ListenerRegistration reg : listeners) {
+            if (reg.query.match(reference)) {
+                final ServiceListener listener = reg.listener;
+                executor.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            listener.serviceChanged(new ServiceEvent(type,
+                                                                     reference));
+                        } catch (Throwable e) {
+                            log.error(String.format("Error when notifying listener %s on reference %s type %s",
+                                                    listener, reference, type),
+                                      e);
+                        }
+                    }
+                });
+            }
+        }
     }
 
     /**
@@ -604,8 +617,8 @@ public class GossipScope implements ServiceScope {
      * @param state
      */
     protected void update(UUID id, byte[] state) {
-	ServiceReferenceImpl reference = deserialize(id, state);
-	services.put(id, reference);
-	serviceChanged(reference, EventType.MODIFIED);
+        ServiceReferenceImpl reference = deserialize(id, state);
+        services.put(id, reference);
+        serviceChanged(reference, EventType.MODIFIED);
     }
 }
