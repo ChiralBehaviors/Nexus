@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.hellblazer</groupId>
 	<artifactId>nexus</artifactId>
-	<version>1.0.1-SNAPSHOT</version>
+	<version>1.0.1</version>
 	<name>Nexus</name>
 	<description>Gossip based service discovery and failure detection</description>
 
@@ -54,7 +54,7 @@
 		<dependency>
 			<groupId>org.slf4j</groupId>
 			<artifactId>slf4j-api</artifactId>
-			<version>1.7.2</version>
+			<version>1.7.5</version>
 		</dependency>
 		<dependency>
 			<groupId>org.mockito</groupId>
@@ -65,18 +65,17 @@
 		<dependency>
 			<groupId>com.hellblazer</groupId>
 			<artifactId>chinese-whispers</artifactId>
-			<version>1.0.1-SNAPSHOT</version>
+			<version>1.0.1</version>
 		</dependency>
 		<dependency>
 			<groupId>com.hellblazer</groupId>
 			<artifactId>service-discovery</artifactId>
-			<version>1.0.1-SNAPSHOT</version>
+			<version>1.0.1</version>
 		</dependency>
 		<dependency>
 			<groupId>ch.qos.logback</groupId>
 			<artifactId>logback-classic</artifactId>
-			<version>1.0.7</version>
-			<scope>test</scope>
+			<version>1.0.13</version>
 		</dependency>
 	</dependencies>
 
