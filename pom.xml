@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.hellblazer</groupId>
 	<artifactId>nexus</artifactId>
-	<version>1.0.1</version>
+	<version>1.0.2-SNAPSHOT</version>
 	<name>Nexus</name>
 	<description>Gossip based service discovery and failure detection</description>
 
@@ -65,7 +65,7 @@
 		<dependency>
 			<groupId>com.hellblazer</groupId>
 			<artifactId>chinese-whispers</artifactId>
-			<version>1.0.1</version>
+			<version>1.0.2-SNAPSHOT</version>
 		</dependency>
 		<dependency>
 			<groupId>com.hellblazer</groupId>
