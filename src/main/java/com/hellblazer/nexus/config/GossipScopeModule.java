@@ -17,7 +17,7 @@
 package com.hellblazer.nexus.config;
 
 import com.hellblazer.gossip.configuration.GossipModule;
-import com.hellblazer.slp.ServiceScope;
+import com.hellblazer.slp.config.ServiceScopeConfiguration;
 
 /**
  * @author hhildebrand
@@ -38,7 +38,7 @@ public class GossipScopeModule extends GossipModule {
     @Override
     public void setupModule(SetupContext context) {
 
-        context.setMixInAnnotations(ServiceScope.class,
+        context.setMixInAnnotations(ServiceScopeConfiguration.class,
                                     GossipScopeConfiguration.class);
         super.setupModule(context);
     }

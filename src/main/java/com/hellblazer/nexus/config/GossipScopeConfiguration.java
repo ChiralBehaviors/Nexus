@@ -18,7 +18,6 @@ package com.hellblazer.nexus.config;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.hellblazer.gossip.configuration.GossipConfiguration;
 import com.hellblazer.nexus.GossipScope;
 import com.hellblazer.slp.ServiceScope;
@@ -28,11 +27,10 @@ import com.hellblazer.slp.config.ServiceScopeConfiguration;
  * @author hhildebrand
  * 
  */
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
-@JsonSubTypes({ @Type(value = GossipConfiguration.class, name = "gossipScope") })
+@JsonSubTypes({ @Type(value = GossipScopeConfiguration.class, name = "gossipScope") })
 public class GossipScopeConfiguration implements ServiceScopeConfiguration {
     public int                 notificationThreads = 2;
-    public GossipConfiguration gossip;
+    public GossipConfiguration gossip              = new GossipConfiguration();
 
     /* (non-Javadoc)
      * @see com.hellblazer.slp.config.ServiceScopeConfiguration#construct()
