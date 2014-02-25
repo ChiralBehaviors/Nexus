@@ -70,7 +70,7 @@
 		<dependency>
 			<groupId>com.hellblazer</groupId>
 			<artifactId>service-discovery</artifactId>
-			<version>1.0.1</version>
+			<version>1.0.2-SNAPSHOT</version>
 		</dependency>
 		<dependency>
 			<groupId>ch.qos.logback</groupId>
