@@ -37,8 +37,7 @@ public class GossipScopeModule extends GossipModule {
 
     @Override
     public void setupModule(SetupContext context) {
-
-        context.setMixInAnnotations(ServiceScopeConfiguration.class,
+        setMixInAnnotation(ServiceScopeConfiguration.class,
                                     GossipScopeConfiguration.class);
         super.setupModule(context);
     }
