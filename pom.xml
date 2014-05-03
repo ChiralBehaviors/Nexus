@@ -26,11 +26,11 @@
 		<connection>git://github.com/Hellblazer/Nexus.git</connection>
 		<url>https://github.com/Hellblazer/Nexus</url>
 	</scm>
-    
-    <properties>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <project.resources.sourceEncoding>UTF-8</project.resources.sourceEncoding>
-    </properties>
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<project.resources.sourceEncoding>UTF-8</project.resources.sourceEncoding>
+	</properties>
 
 	<repositories>
 		<repository>
@@ -87,7 +87,7 @@
 		<dependency>
 			<groupId>com.fasterxml.jackson.core</groupId>
 			<artifactId>jackson-databind</artifactId>
-			<version>2.3.2</version>
+			<version>2.2.2</version>
 			<optional>true</optional>
 		</dependency>
 	</dependencies>
