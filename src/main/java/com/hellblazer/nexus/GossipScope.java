@@ -391,6 +391,10 @@ public class GossipScope implements ServiceScope {
 
     }
 
+    public Gossip getGossip() {
+        return gossip;
+    }
+
     /* (non-Javadoc)
      * @see com.hellblazer.slp.ServiceScope#getReference(java.util.UUID)
      */
