@@ -16,7 +16,6 @@
 
 package com.hellblazer.nexus.config;
 
-import com.fasterxml.jackson.databind.Module.SetupContext;
 import com.hellblazer.gossip.configuration.GossipModule;
 import com.hellblazer.slp.config.ServiceScopeConfiguration;
 
