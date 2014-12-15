@@ -18,6 +18,7 @@ package com.hellblazer.nexus;
 
 import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
+import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -41,6 +42,7 @@ import com.hellblazer.gossip.Gossip;
 import com.hellblazer.gossip.GossipListener;
 import com.hellblazer.slp.Filter;
 import com.hellblazer.slp.InvalidSyntaxException;
+import com.hellblazer.slp.NetworkedScope;
 import com.hellblazer.slp.ServiceEvent;
 import com.hellblazer.slp.ServiceEvent.EventType;
 import com.hellblazer.slp.ServiceListener;
@@ -56,7 +58,7 @@ import com.hellblazer.slp.ServiceURL;
  * @author <a href="mailto:hal.hildebrand@gmail.com">Hal Hildebrand</a>
  * 
  */
-public class GossipScope implements ServiceScope {
+public class GossipScope implements NetworkedScope {
     private class GossipDispatcher implements GossipListener {
 
         /*
@@ -393,6 +395,14 @@ public class GossipScope implements ServiceScope {
 
     public Gossip getGossip() {
         return gossip;
+    }
+
+    /* (non-Javadoc)
+     * @see com.hellblazer.slp.NetworkedScope#getLocalAddress()
+     */
+    @Override
+    public InetSocketAddress getLocalAddress() {
+        return gossip.getLocalAddress();
     }
 
     /* (non-Javadoc)
